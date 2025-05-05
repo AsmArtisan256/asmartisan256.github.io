@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CubeMadness1</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">CubeMadness1</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+
+<p>
+This game, like most, is an <code>EXE</code> file I have to run under Wine or Proton. Looks
+like a simple game, where you have to collect the well known HTB cubes. You have
+to collect 20 of them, but jumping around, I could only get 6 of them.
+</p>
+
+
+<div id="orgfe1d9c4" class="figure">
+<p><img src="writeup-img/2025-02-03_18-30-19_screenshot.png" alt="2025-02-03_18-30-19_screenshot.png" />
+</p>
+</div>
+
+<p>
+How can we get all of them? Going around the "jail" the ball is in, there are no
+more cubes to collect, so it's time to call the classic tool for game hacking:
+<code>Cheat Engine</code>. Being under GNU/Linux and Proton is not issue since I use
+<code>protontricks-launch</code> to launch an executable file in the same environment the
+game is running in. If that does not work (i.e. you can't read the addresses),
+you have to use a very manual command to run <code>Cheat Engine</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell"><span class="org-variable-name">STEAM_COMPAT_CLIENT_INSTALL_PATH</span>=~/.steam/ <span class="org-variable-name">STEAM_COMPAT_DATA_PATH</span>=~/.steam/steam/steamapps/compatdata/&lt;APP_ID&gt;/ <span class="org-variable-name">WINEPREFIX</span>=~/.steam/steam/steamapps/compatdata/&lt;APP_ID&gt;/pfx &lt;PATH_TO_PROTON&gt;/proton run cheatengine-x86_64.exe
+</pre>
+</div>
+
+
+
+<div id="org14dda69" class="figure">
+<p><img src="writeup-img/2025-02-03_18-35-27_screenshot.png" alt="2025-02-03_18-35-27_screenshot.png" />
+</p>
+</div>
+
+<p>
+So, after attaching <code>Cheat Engine</code> to the game, we start using the classic
+technique everybody familiar with the tool knows. We start searching the memory
+for the value <code>0</code>. We get so many addresses so we have to narrow it down! We catch
+a cube and search for the value <code>1</code> and we still get too many addresses. I only
+got it right after getting the 4th cube and searching for the value <code>4</code>.
+</p>
+
+
+
+<div id="orgfdb835d" class="figure">
+<p><img src="writeup-img/2025-02-03_19-00-25_screenshot.png" alt="2025-02-03_19-00-25_screenshot.png" />
+</p>
+</div>
+
+
+<p>
+Since I only got 3 addresses with the value <code>4</code>, which seems to match the points
+in the game, we copy those addresses to the Cheat Engine address list, freeze
+them and set their value to <code>20</code> and the flag appears instantly in the game.
+</p>
+
+
+
+<div id="orgc716c10" class="figure">
+<p><img src="writeup-img/2025-02-03_19-06-26_screenshot.png" alt="2025-02-03_19-06-26_screenshot.png" />
+</p>
+</div>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">03-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

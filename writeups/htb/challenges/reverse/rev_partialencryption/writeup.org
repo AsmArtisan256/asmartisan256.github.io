@@ -1,0 +1,192 @@
+#+TITLE: Partial Encryption
+#+AUTHOR: AsmArtisan256
+#+DATE: 01-02-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: partialencryption
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+#+TOC: headlines 2
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+
+Another Windows binary, great...!
+
+By analyzing the entry point, the =main= function is very short and has 4
+important function calls. I already put the "correct" name after analyzing the
+file thoroughly.
+
+#+BEGIN_SRC c
+int __fastcall main(int argc, const char **argv, const char **envp)
+{
+  int v4; // [rsp+30h] [rbp-18h] BYREF
+  int *v5; // [rsp+38h] [rbp-10h]
+
+  v4 = 0;
+  v5 = &v4;
+  check_args_and_print_error((__int64)putchar, (__int64)exit, argc, (DWORD *)argv);
+  flag_not_valid_error((__int64)putchar, (__int64)exit, (unsigned int)argc, (__int64)argv);
+  flag_check((_DWORD)putchar, (_DWORD)exit, argc, (_DWORD)argv, (__int64)v5);
+  result_output((_DWORD)putchar, (_DWORD)exit, argc, (_DWORD)argv, (__int64)v5);
+  return 0;
+}
+#+END_SRC
+
+Every single one of the functions has the same logic, more or less, and all of
+them hide the real logic behind AES encrypted bytes. So, basically, every
+function calls another function to decrypt specific bytes into valid x86
+instructions and the runs as a function pointer. It uses the well known
+=VirtualAlloc= and =VirtualProtect= functions to achieve this capability and to turn
+that region into executable code. Here is an example from the binary itself:
+
+#+BEGIN_SRC c
+LPVOID __fastcall compile_aes_function(__int64 bytes, int n)
+{
+  __m128i v2; // xmm0
+  __m128i v3; // xmm0
+  int i; // [rsp+20h] [rbp-38h]
+  DWORD flOldProtect; // [rsp+24h] [rbp-34h] BYREF
+  LPVOID lpAddress; // [rsp+28h] [rbp-30h]
+  __m128i v8; // [rsp+30h] [rbp-28h] BYREF
+  __m128i v9; // [rsp+40h] [rbp-18h] BYREF
+
+  lpAddress = VirtualAlloc(0LL, n, 4096u, PAGE_READWRITE);
+  for ( i = 0; i < n / 16; ++i )
+  {
+    v2 = _mm_cvtsi32_si128((char)i);
+    v3 = _mm_unpacklo_epi8(v2, v2);
+    v8 = _mm_shuffle_epi32(_mm_unpacklo_epi16(v3, v3), 0);
+    v9 = _mm_loadu_si128((const __m128i *)(bytes + 16LL * i));
+    *((__m128 *)lpAddress + i) = sub_140001000(&v9, &v8);
+  }
+  VirtualProtect(lpAddress, n, 0x20u, &flOldProtect);
+  return lpAddress;
+}
+#+END_SRC
+
+This is annoying, because I mainly use GNU/Linux and to readily get these bytes
+decrypted, I have to debug on Windows, set the breakpoints at the exact moment
+the instructions are decrypted to then read them. The first two functions this
+isn't even needed, because the first one verifies if =argc= is not =2=, therefore,
+we know the binary needs 1 extra argument, and the second one checks if the
+extra argument has 22 characters:
+
+#+BEGIN_SRC c
+...
+
+ for ( i = 0; i < 22; ++i )
+  {
+    if ( !*(_BYTE *)(*(_QWORD *)(argv + 8) + i) )
+
+...
+#+END_SRC
+
+So, by debugging the code and getting the decrypted instructions, I found the 4
+most important functions to get the flag, all of which are executed in the third
+function call in =main=:
+
+#+BEGIN_SRC c
+__int64 __fastcall sub_1E1B6A70000(__int64 a1, __int64 a2, __int64 a3, __int64 a4, _DWORD *a5)
+{
+  __int64 result; // rax
+
+  ,*a5 |= **(_BYTE **)(a4 + 8) != 'H';
+  ,*a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 1LL) != 'T';
+  ,*a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 2LL) != 'B';
+  ,*a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 3LL) != '{';
+  result = (unsigned int)(*(_BYTE *)(*(_QWORD *)(a4 + 8) + 21LL) != '}') | *a5;
+  ,*a5 = result;
+  return result;
+}
+#+END_SRC
+
+#+BEGIN_SRC c
+__int64 __fastcall sub_2E002D80000(__int64 a1, __int64 a2, __int64 a3, __int64 a4, _DWORD *a5)
+{
+  __int64 result; // rax
+
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 4LL) != 'W';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 5LL) != '3';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 6LL) != 'i';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 7LL) != 'R';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 8LL) != 'd';
+  result = (unsigned int)(*(_BYTE *)(*(_QWORD *)(a4 + 8) + 9LL) != '_') | *a5;
+  *a5 = result;
+  return result;
+}
+#+END_SRC
+
+#+BEGIN_SRC c
+__int64 __fastcall sub_1C511D10000(__int64 a1, __int64 a2, __int64 a3, __int64 a4, _DWORD *a5)
+{
+  __int64 result; // rax
+
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 10LL) != 'R';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 11LL) != 'U';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 12LL) != 'n';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 13LL) != 'T';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 14LL) != '1';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 15LL) != 'm';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 16LL) != '3';
+  result = (unsigned int)(*(_BYTE *)(*(_QWORD *)(a4 + 8) + 17LL) != '_') | *a5;
+  *a5 = result;
+  return result;
+}
+#+END_SRC
+
+#+BEGIN_SRC c
+__int64 __fastcall sub_25BCB6E0000(__int64 a1, __int64 a2, __int64 a3, __int64 a4, _DWORD *a5)
+{
+  __int64 result; // rax
+
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 18LL) != 'D';
+  *a5 |= *(_BYTE *)(*(_QWORD *)(a4 + 8) + 19LL) != 'E';
+  result = (unsigned int)(*(_BYTE *)(*(_QWORD *)(a4 + 8) + 20LL) != 'C') | *a5;
+  *a5 = result;
+  return result;
+}
+#+END_SRC
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">01-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Spookifier</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Spookifier</h1>
+<p>
+The website presents us with a text box where we can insert any kind of text.
+After submitting it, it shows us a table with 4 rows, each one with stylized
+text, except the last one. One of the obvious first things to try is injecting
+HTML, something like <code>&lt;i style="color:red;"&gt;test&lt;/i&gt;</code>, which worked:
+</p>
+
+
+
+<div id="orga855441" class="figure">
+<p><img src="writeup-img/2025-01-04_14-44-57_screenshot.png" alt="2025-01-04_14-44-57_screenshot.png" />
+</p>
+</div>
+
+<p>
+Easy to sense some kind of code injection in this challenge. If the web app
+files are downloaded, it's possible to see that it was done in Python, using a
+template engine called <code>Mako</code>. Similar to <code>Jinja2</code>, we can verify if we can inject
+Python code. Let's test simple math by adding two numbers (<code>${1+1}</code>):
+</p>
+
+
+
+<div id="orgea91d7f" class="figure">
+<p><img src="writeup-img/2025-01-04_14-48-41_screenshot.png" alt="2025-01-04_14-48-41_screenshot.png" />
+</p>
+</div>
+
+<p>
+As expected, it worked. Therefore, we can use some known payloads for the <code>Mako</code> template engine:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python">${<span class="org-keyword">self</span>.module.cache.util.os.popen(<span class="org-string">"COMMAND_HERE"</span>).read()}
+</pre>
+</div>
+
+<p>
+So, where it says <code>COMMAND_HERE</code>, we can just write any kind of shell command to
+get the results. It's possible to use <code>pwd</code>, <code>ls</code> and <code>cat</code> to find and read the
+<code>flag.txt</code> file, which is in the root directory:
+</p>
+
+
+
+<div id="orgc5aa4a8" class="figure">
+<p><img src="writeup-img/2025-01-04_14-52-45_screenshot.png" alt="2025-01-04_14-52-45_screenshot.png" />
+</p>
+</div>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">04-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

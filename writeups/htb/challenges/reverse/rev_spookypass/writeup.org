@@ -1,0 +1,60 @@
+#+TITLE: SpookyPass
+#+AUTHOR: AsmArtisan256
+#+DATE: 12-01-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: spookypass
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+#+TOC: headlines 2
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+
+This executable prompts us for a password. Therefore, I guess we have to find
+the password it asks for. As usual, I'm going to reverse this binary using Ida
+Pro. But, it isn't really needed at all. This challenge is so easy you can just
+use the =strings= command and get the password to get the flag.
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">12-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

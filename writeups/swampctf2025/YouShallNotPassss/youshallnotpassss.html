@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>You Shall Not Passss</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">You Shall Not Passss</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+<p>
+This binary, when ran, asks for a password. Obviously, I inserted the wrong
+password:
+</p>
+
+
+
+<div id="orgb2b8f9e" class="figure">
+<p><img src="writeup-img/2025-05-04_13-25-45_screenshot.png" alt="2025-05-04_13-25-45_screenshot.png" />
+</p>
+</div>
+
+
+<p>
+Firing up this ELF file in IDA Pro, it's possible to see that the <code>main</code> function
+is kind of confusing. A lot of XOR operations, including two loops where even
+more XOR operations are being done. Before the function returns <code>0</code>, there is a
+function call. This function call is where the interesting part is:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-C"><span class="org-type">void</span> <span class="org-function-name">sub_17E0</span>()
+{
+  <span class="org-type">size_t</span> <span class="org-variable-name">v0</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">r12</span>
+  <span class="org-type">__m128i</span> *<span class="org-variable-name">v1</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">rax</span>
+  <span class="org-type">__m128i</span> *<span class="org-variable-name">v2</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">rbp</span>
+
+  v0 = sysconf(30);
+  v1 = (<span class="org-type">__m128i</span> *)mmap(0LL, v0, 7, 34, -1, 0LL);
+  <span class="org-keyword">if</span> ( v1 == (__m128i *)-1LL )
+  {
+    perror(<span class="org-string">"mmap"</span>);
+  }
+  <span class="org-keyword">else</span>
+  {
+    v2 = v1;
+    *v1 = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_4180);
+    v1[1] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_4190);
+    v1[2] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_41A0);
+    v1[3] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_41B0);
+    v1[4] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_41C0);
+    v1[5] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_41D0);
+    v1[6] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_41E0);
+    v1[7] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_41F0);
+    v1[8] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_4200);
+    v1[9] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_4210);
+    v1[10] = _mm_load_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)&amp;xmmword_4220);
+    v1[11].m128i_i64[0] = qword_4230;
+    v1[11].m128i_i32[2] = dword_4238;
+    v1[11].m128i_i16[6] = word_423C;
+    ((<span class="org-type">void</span> (<span class="org-type">__fastcall</span> *)(<span class="org-type">void</span> *, <span class="org-type">char</span> *, <span class="org-type">char</span> *, <span class="org-type">void</span> *, <span class="org-type">void</span> *))v1)(
+      &amp;unk_4040,
+      &amp;byte_4030,
+      &amp;byte_4020,
+      &amp;unk_4260,
+      &amp;unk_4140);
+    munmap(v2, v0);
+  }
+}
+</pre>
+</div>
+
+<p>
+First off, there is an <code>mmap</code> call and a call to the result of the <code>mmap</code> call. This
+is confirmed by the number <code>7</code> in the <code>prot</code> field, which is the result of
+<code>PROT_READ|PROT_WRITE|PROT_EXEC</code>. Additionaly, there are many values being loaded
+into the generated memory region. Also, given that it's impossible to find the
+strings that are printed to the terminal, there are more reasons to assume that
+the code that interests us is here. An easy way to get the code and get the
+<code>pseudocode</code> is to debug in IDA Pro. After setting up the breaking where <code>v1</code> is
+called, we can get the hidden code:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-C"><span class="org-type">signed</span> __int64 <span class="org-type">__fastcall</span> <span class="org-function-name">sub_7FFFF7FBD000</span>(<span class="org-keyword">const</span> <span class="org-type">char</span> *<span class="org-variable-name">buf</span>, <span class="org-keyword">const</span> <span class="org-type">char</span> *<span class="org-variable-name">a2</span>, <span class="org-keyword">const</span> <span class="org-type">char</span> *<span class="org-variable-name">a3</span>, <span class="org-type">char</span> *<span class="org-variable-name">a4</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a5</span>)
+{
+  <span class="org-type">signed</span> <span class="org-type">__int64</span> <span class="org-variable-name">v9</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">rax</span>
+  <span class="org-type">signed</span> <span class="org-type">__int64</span> <span class="org-variable-name">v10</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">rax</span>
+  <span class="org-type">unsigned</span> <span class="org-type">int</span> <span class="org-variable-name">v11</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">eax</span>
+  <span class="org-type">__int64</span> <span class="org-variable-name">v12</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">rdx</span>
+  <span class="org-type">int</span> <span class="org-variable-name">v13</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">esi</span>
+
+  v9 = sys_write(0, buf, 0x1CuLL);
+  v10 = sys_read(0, a4, 0x24uLL);
+  v11 = 1;
+  v12 = 0LL;
+  v13 = 1;
+  <span class="org-keyword">do</span>
+  {
+    v11 = (330 * v11 + 100) % 0x8FF;
+    <span class="org-keyword">if</span> ( ((<span class="org-type">unsigned</span> <span class="org-type">__int8</span>)v11 ^ (<span class="org-type">unsigned</span> <span class="org-type">__int8</span>)a4[v12]) != *(<span class="org-type">_BYTE</span> *)(a5 + v12) )
+      v13 = 0;
+    ++v12;
+  }
+  <span class="org-keyword">while</span> ( v12 != 36 );
+  <span class="org-keyword">if</span> ( <span class="org-negation-char">!</span>v13 )
+    a3 = a2;
+  <span class="org-keyword">return</span> sys_write(1u, a3, 0xAuLL);
+}
+</pre>
+</div>
+
+<p>
+The <code>sys_read</code> call is, obviously, the user input. And there is a while loop where
+even more XOR operations occur. There is a condition that changes the variable
+<code>v13</code>, which seems to be the variable that determines if the password is correct
+or not, and <code>v12</code> seems to be the index. Therefore, the variable <code>a5</code> seems to hold
+the flag we are looking for. Another interesting thing is that the password has
+36 characters. So, according to the while loop, it's possible to get the flag:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span class="org-variable-name">flag</span> <span class="org-operator">=</span> [
+    0xDD, 0x9A, 0xDE, 0x4E, 0x69, 0xE1, 0xE9, 0x2C, 0xD2, 0x4E, 0xEC, 0xE7,
+    0x18, 0x26, 0x6A, 0x56, 0x79, 0xD8, 0xA3, 0x55, 0x72, 0xBC, 0x76, 0xC4,
+    0x0C, 0x0F, 0x9B, 0xBE, 0xC6, 0x81, 0xE2, 0x41, 0x47, 0xA0, 0xF4, 0x26
+]
+
+<span class="org-variable-name">v11</span> <span class="org-operator">=</span> 1
+<span class="org-variable-name">password</span> <span class="org-operator">=</span> []
+
+<span class="org-keyword">for</span> i <span class="org-keyword">in</span> <span class="org-builtin">range</span>(36):
+    <span class="org-variable-name">new_v11</span> <span class="org-operator">=</span> (330 <span class="org-operator">*</span> v11 <span class="org-operator">+</span> 100) <span class="org-operator">%</span> 0x8FF
+    <span class="org-variable-name">v11_byte</span> <span class="org-operator">=</span> new_v11 <span class="org-operator">&amp;</span> 0xFF
+    <span class="org-variable-name">password_byte</span> <span class="org-operator">=</span> v11_byte <span class="org-operator">^</span> flag[i]
+    password.append(<span class="org-builtin">chr</span>(password_byte))
+    <span class="org-variable-name">v11</span> <span class="org-operator">=</span> new_v11
+
+<span class="org-builtin">print</span>(<span class="org-string">''</span>.join(password))
+</pre>
+</div>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">04-05-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

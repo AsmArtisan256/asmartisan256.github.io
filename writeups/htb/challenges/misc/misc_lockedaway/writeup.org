@@ -1,0 +1,106 @@
+#+TITLE: Locked Away
+#+AUTHOR: AsmArtisan256
+#+DATE: 12-01-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: lockedaway
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+#+TOC: headlines 2
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+After downloading the files, we are presented with a very short =Python= script
+which asks for your input in an infinite loop.
+
+#+BEGIN_SRC python
+def open_chest():
+    with open('flag.txt', 'r') as f:
+        print(f.read())
+
+
+blacklist = [
+    'import', 'os', 'sys', 'breakpoint',
+    'flag', 'txt', 'read', 'eval', 'exec',
+    'dir', 'print', 'subprocess', '[', ']',
+    'echo', 'cat', '>', '<', '"', '\'', 'open'
+]
+
+print(banner)
+
+while True:
+    command = input('The chest lies waiting... ')
+
+    if any(b in command for b in blacklist):
+        print('Invalid command!')
+        continue
+
+    try:
+        exec(command)
+    except Exception:
+        print('You have been locked away...')
+        exit(1337)
+#+END_SRC
+
+Every command the user enters, if not blocked by the blacklist, goes through the
+=exec= function, which basically executes any =Python= code you want. Here is an example:
+
+#+BEGIN_SRC python :results output
+exec('print("hello world!")')
+#+END_SRC
+
+#+BEGIN_SRC
+hello world!
+#+END_SRC
+
+It just executed the =Python= code we passed to the function as a string. So all
+we have to do is execute the =open_chest()= function! But it's not that easy. The
+function name has a word that is in the blacklist, therefore, it won't execute
+the method, but since we can execute any =Python= code, within limits, we can just
+clear the blacklist. Obviously, doing =blacklist = []= won't work because square
+brackets are in the blacklist, rather, we can use the method =clear()= by doing
+=blacklist.clear()=. Now the blacklist is empty, and we can just execute
+=open_chest()= to get the flag!
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">12-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

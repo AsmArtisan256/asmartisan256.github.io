@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Flag Command</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Flag Command</h1>
+<p>
+Something resembling a text-based adventure game appears on the webpage. It
+tells you to write <code>start</code> to start the game. Then, four options are given to you,
+but all of them give the same result and you can't really do anything past that.
+</p>
+
+<p>
+So it's time to check the source of the page and find out there are multiple
+Javascript files being included: <code>commands.json</code> looks useless, since it just has
+the output text and no flag in sight, as well as <code>game.js</code>, while <code>main.js</code> contains
+a lot more code and information, including some HTTP requests. One of them
+looked very interesting:
+</p>
+
+
+
+<div id="orgc5a2dfb" class="figure">
+<p><img src="writeup-img/2025-01-03_11-50-09_screenshot.png" alt="2025-01-03_11-50-09_screenshot.png" />
+</p>
+</div>
+
+
+<p>
+Looks like an HTTP request we can do using <code>CURL</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">curl http://94.237.53.202:43221/api/options
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-js">{
+  <span class="org-string">"allPossibleCommands"</span>: {
+    <span class="org-string">"1"</span>: [
+      <span class="org-string">"HEAD NORTH"</span>,
+      <span class="org-string">"HEAD WEST"</span>,
+      <span class="org-string">"HEAD EAST"</span>,
+      <span class="org-string">"HEAD SOUTH"</span>
+    ],
+    <span class="org-string">"2"</span>: [
+      <span class="org-string">"GO DEEPER INTO THE FOREST"</span>,
+      <span class="org-string">"FOLLOW A MYSTERIOUS PATH"</span>,
+      <span class="org-string">"CLIMB A TREE"</span>,
+      <span class="org-string">"TURN BACK"</span>
+    ],
+    <span class="org-string">"3"</span>: [
+      <span class="org-string">"EXPLORE A CAVE"</span>,
+      <span class="org-string">"CROSS A RICKETY BRIDGE"</span>,
+      <span class="org-string">"FOLLOW A GLOWING BUTTERFLY"</span>,
+      <span class="org-string">"SET UP CAMP"</span>
+    ],
+    <span class="org-string">"4"</span>: [
+      <span class="org-string">"ENTER A MAGICAL PORTAL"</span>,
+      <span class="org-string">"SWIM ACROSS A MYSTERIOUS LAKE"</span>,
+      <span class="org-string">"FOLLOW A SINGING SQUIRREL"</span>,
+      <span class="org-string">"BUILD A RAFT AND SAIL DOWNSTREAM"</span>
+    ],
+    <span class="org-string">"secret"</span>: [
+      <span class="org-string">"Blip-blop, in a pickle with a hiccup! Shmiggity-shmack"</span>
+    ]
+  }
+}
+</pre>
+</div>
+
+<p>
+These look like the commands we can use on the prompt. There is a secret command
+too. If we execute that command after using <code>start</code>, we get the flag!
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">03-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

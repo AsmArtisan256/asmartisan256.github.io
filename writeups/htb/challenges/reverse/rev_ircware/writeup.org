@@ -1,0 +1,180 @@
+#+TITLE: IRCWare
+#+AUTHOR: AsmArtisan256
+#+DATE: 30-01-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: ircware
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+#+TOC: headlines 2
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+
+As usual, the binary is opened in IDA Pro and I engage into some deep analysis.
+Just by looking at the name, it's easy to assume this binary has something to do
+with IRC.
+
+And, as expected, the entry point =start= has all the necessary code to initialize
+a socket and connect. After that, some IRC commands are sent and the usual
+infinite loop starts:
+
+#+BEGIN_SRC c
+signed __int64 start()
+{
+  getrandom(&aUserIrcwareName[13], 4uLL, 0);
+  // generate random number
+  *(_DWORD *)&aUserIrcwareName[13] &= 0x7070707u;
+  *(_DWORD *)&aUserIrcwareName[13] |= 0x30303030u;
+  if ( create_socket_and_connect() >= 0 )
+  {
+    send_command(aUserIrcwareName);
+    send_command(aUserIrcware0Ir);
+    send_command(aJoinSecret);
+    while ( 1 )                                 // irc loop
+    {
+      read_command();
+      main_function();
+    }
+  }
+  write(1, aExceptionAbort, count);
+  return sys_exit(1);
+}
+#+END_SRC
+
+The loop is as simple as reading the command and executing functions based on
+that command. The commands send in the above code aren't important at all. Now,
+the main function is very big and it has the logic for interpreting the
+following commands:
+
+#+BEGIN_SRC
+PING :
+PRIVMSG #secret :@pass <pass>
+PRIVMSG #secret :@exec <shell_command>
+PRIVMSG #secret :@flag
+#+END_SRC
+
+If we execute =PRIVMSG #secret :@flag=, maybe we get the flag. According to the
+function =create_socket_and_connect=, the socket is created at address =127.0.0.1=
+and uses port =8000=. The address comes from =16777343=, which is =0x0100007F= in
+big-endian and by reversing the bytes we get =0x7F000001= which can be translated
+into =127.0.0.1=. The same can be done for =16415=, which is translated to =8000=:
+
+#+BEGIN_SRC c
+signed __int32 create_socket_and_connect()
+{
+  _WORD v2[2]; // [rsp-Ch] [rbp-Ch] BYREF
+  __int64 v3; // [rsp-8h] [rbp-8h]
+
+  *(_QWORD *)&fd = sys_socket(2, 1, 0);
+  v3 = 16777343LL;
+  v2[1] = 16415;
+  v2[0] = 2;
+  return sys_connect(fd, (struct sockaddr *)v2, 16);
+}
+#+END_SRC
+
+So it's possible to just listen to that address and port and run the binary.
+First we use =netcat= to listen and then we run the =IRCWare= binary and then we can
+send commands through =netcat=:
+
+#+BEGIN_SRC shell
+$ nc -l 127.0.0.1 8000
+
+NICK ircware_3523
+USER ircware 0 * :ircware
+JOIN #secret
+PRIVMSG #secret :@flag
+PRIVMSG #secret :Requires password
+#+END_SRC
+
+As expected, if we send the command to (possibly) get the flag, we get the
+response that a password is required. To insert the password, we got to run the
+command =PRIVMSG #secret :@pass <pass>=. But what's the password? How can we get
+it? Analyzing the code that runs when we insert a password, it seems that it
+transforms the password in a way that the final string becomes =RJJ3DSCP=
+(=xor_key=). So, to find the correct password, we need to do the reverse process,
+going from =RJJ3DSCP= to the correct input.
+
+#+BEGIN_SRC c
+v14 = (unsigned __int8 *)&v20[aPrivmsgSecretPassLen - 1];
+v15 = xor_key2;
+v16 = xor_key1;
+v17 = 0LL;
+while ( 1 )
+  {
+    v18 = *v14;
+    *v16 = *v14;
+    if ( !v18 || v18 == 10 || v18 == 13 )
+      break;
+    if ( v17 > key_length )
+      goto LABEL_35;
+    if ( v18 >= 'A' && v18 <= 'Z' )
+      {
+        v18 += 17;
+        if ( v18 > 'Z' )
+          v18 = v18 - 90 + 64;
+      }
+    if ( *v15 != v18 )
+      goto LABEL_35;
+    ++v17;
+    ++v16;
+    ++v14;
+    ++v15;
+  }
+#+END_SRC
+
+We just pick up each valid letter of =RJJ3DSCP=, except the number =3=, and subtract
+=17=. If the value under-flows, we just add =26=, which comes as a result of =90 -
+64=. I honestly did this by hand, and the result was =ASS3MBLY=. And now, if we use
+this as the password, we get the result saying =Accepted=:
+
+#+BEGIN_SRC shell
+PRIVMSG #secret :@pass ASS3MBLY
+PRIVMSG #secret :Accepted
+#+END_SRC
+
+And now, time to call the =@flag= command again to get the flag!
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">30-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

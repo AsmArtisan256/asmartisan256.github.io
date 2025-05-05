@@ -1,0 +1,172 @@
+#+TITLE: Computational Recruiting
+#+AUTHOR: AsmArtisan256
+#+DATE: 03-02-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: computationalrecruiting
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+#+TOC: headlines 2
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+
+After starting the challenge instance and connecting through =netcat=, we get the
+following information:
+
+#+BEGIN_SRC
+You will be given a file with N = 200 different potential candidates. Every candidates has 6 different skills, with a score 1 <= s <= 10 for each.
+The formulas to calculate their general value are:
+        <skill>_score = round(6 * (int(s) * <skill>_weight)) + 10
+        overall_value = round(5 * ((health * 0.18) + (agility * 0.20) + (charisma * 0.21) + (knowledge * 0.08) + (energy * 0.17) + (resourcefulness * 0.16)))
+        Note: The round() function here is Python 3's round(), which uses a concept called Banker's Rounding
+The weights for the 6 skills are: health_weight = 0.2, agility_weight = 0.3, charisma_weight = 0.1, knowledge_weight = 0.05, energy_weight = 0.05, resourcefulness_weight = 0.3
+Enter the first 14 candidates ordered in the highest overall values.
+Enter them like so: Name_1 Surname_1 - score_1, Name_2 Surname_2 - score_2, ..., Name_i Surname_i - score_i
+        e.g. Timothy Pempleton - 94, Jimmy Jones - 92, Randolf Ray - 92, ...
+#+END_SRC
+
+The file is given by the challenge through the =Download Files= button and it
+contains all the information listed above for all 200 candidates.
+
+#+BEGIN_SRC
+ ============ ============== ======== ========= ========== =========== ======== =================
+  First Name    Last Name     Health   Agility   Charisma   Knowledge   Energy   Resourcefulness
+ ============ ============== ======== ========= ========== =========== ======== =================
+  Alis         Reeson              2         5          5           8        7                10
+  Gerri        Bielfelt            8         9          3           8        5                 9
+  Wolfie       Appleby             5         1          2           7        2                 1
+...
+  Rusty        Ardern             10        10          2          10        6                 1
+  Nikaniki     Overall             3         6          7           7        6                 5
+ ============ ============== ======== ========= ========== =========== ======== =================
+
+#+END_SRC
+
+So, all it is needed is to write a script that parses the list, uses both
+formulas to calculate the final overall value to then sort and print the list of
+the 14 best candidates:
+
+#+BEGIN_SRC python
+def read_people(file_path):
+    people = []
+
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+
+    data_lines = lines[3:-1]
+
+    for line in data_lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        parts = line.split()
+
+        try:
+            person = {
+                'first_name': parts[0],
+                'last_name': parts[1],
+                'health': int(parts[2]),
+                'agility': int(parts[3]),
+                'charisma': int(parts[4]),
+                'knowledge': int(parts[5]),
+                'energy': int(parts[6]),
+                'resourcefulness': int(parts[7])
+            }
+
+            people.append(person)
+        except ValueError as e:
+            print(f"Error processing line '{line}': {e}")
+
+    return people
+
+
+def calculate_scores(people):
+    for person in people:
+        person['health_score'] = round(6 * (person['health'] * 0.2)) + 10
+        person['agility_score'] = round(6 * (person['agility'] * 0.3)) + 10
+        person['charisma_score'] = round(6 * (person['charisma'] * 0.1)) + 10
+        person['knowledge_score'] = round(6 *
+                                          (person['knowledge'] * 0.05)) + 10
+        person['energy_score'] = round(6 * (person['energy'] * 0.05)) + 10
+        person['resourcefulness_score'] = round(
+            6 * (person['resourcefulness'] * 0.3)) + 10
+
+        weighted_sum = (person['health_score'] * 0.18 +
+                        person['agility_score'] * 0.20 +
+                        person['charisma_score'] * 0.21 +
+                        person['knowledge_score'] * 0.08 +
+                        person['energy_score'] * 0.17 +
+                        person['resourcefulness_score'] * 0.16)
+        person['overall_value'] = round(5 * weighted_sum)
+
+    return people
+
+
+if __name__ == '__main__':
+    people_data = read_people('data.txt')
+    people_with_scores = calculate_scores(people_data)
+
+    sorted_people = sorted(people_with_scores,
+                           key=lambda x: x['overall_value'],
+                           reverse=True)
+
+    for rank, person in enumerate(sorted_people[:14], 1):
+        print(
+            f"{person['first_name']} {person['last_name']} - {person['overall_value']}, ",
+            end='')
+
+#+END_SRC
+
+Here is the result:
+
+#+BEGIN_SRC
+Jayson Enderby - 98, Malva Shreeve - 96, Randolf Raybould - 96, Shay Sheardown - 95, Koo Rue - 94, Tabina Nathon - 94, Taber Haile - 93, Constanta Rolfs - 93, Corette Bursnell - 93, Gerri Bielfelt - 92, Andy Swane - 91, Colene Vanyatin - 91, Lowe Farnan - 91, Ashlin Neely - 91,
+#+END_SRC
+
+Just remove the last comma and paste the result in the =netcat= window to get the
+flag!
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">03-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

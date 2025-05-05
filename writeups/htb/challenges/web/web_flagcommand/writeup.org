@@ -1,0 +1,104 @@
+#+TITLE: Flag Command
+#+AUTHOR: AsmArtisan256
+#+DATE: 03-01-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: flagcommand
+
+
+Something resembling a text-based adventure game appears on the webpage. It
+tells you to write =start= to start the game. Then, four options are given to you,
+but all of them give the same result and you can't really do anything past that.
+
+So it's time to check the source of the page and find out there are multiple
+Javascript files being included: =commands.json= looks useless, since it just has
+the output text and no flag in sight, as well as =game.js=, while =main.js= contains
+a lot more code and information, including some HTTP requests. One of them
+looked very interesting:
+
+
+#+DOWNLOADED: screenshot @ 2025-01-03 11:50:09
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-03_11-50-09_screenshot.png]]
+
+
+Looks like an HTTP request we can do using =CURL=:
+
+#+begin_src sh :results output
+curl http://94.237.53.202:43221/api/options
+#+end_src
+
+#+begin_src js
+{
+  "allPossibleCommands": {
+    "1": [
+      "HEAD NORTH",
+      "HEAD WEST",
+      "HEAD EAST",
+      "HEAD SOUTH"
+    ],
+    "2": [
+      "GO DEEPER INTO THE FOREST",
+      "FOLLOW A MYSTERIOUS PATH",
+      "CLIMB A TREE",
+      "TURN BACK"
+    ],
+    "3": [
+      "EXPLORE A CAVE",
+      "CROSS A RICKETY BRIDGE",
+      "FOLLOW A GLOWING BUTTERFLY",
+      "SET UP CAMP"
+    ],
+    "4": [
+      "ENTER A MAGICAL PORTAL",
+      "SWIM ACROSS A MYSTERIOUS LAKE",
+      "FOLLOW A SINGING SQUIRREL",
+      "BUILD A RAFT AND SAIL DOWNSTREAM"
+    ],
+    "secret": [
+      "Blip-blop, in a pickle with a hiccup! Shmiggity-shmack"
+    ]
+  }
+}
+#+end_src
+
+These look like the commands we can use on the prompt. There is a secret command
+too. If we execute that command after using =start=, we get the flag!
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">03-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

@@ -1,0 +1,83 @@
+:PROPERTIES:
+:ID:       b701a6cc-d9db-4ab8-a6b7-947abfcc43e7
+:END:
+#+TITLE: Spookifier
+#+AUTHOR: AsmArtisan256
+#+DATE: 04-01-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: spookifier
+
+
+The website presents us with a text box where we can insert any kind of text.
+After submitting it, it shows us a table with 4 rows, each one with stylized
+text, except the last one. One of the obvious first things to try is injecting
+HTML, something like ~<i style="color:red;">test</i>~, which worked:
+
+
+#+DOWNLOADED: screenshot @ 2025-01-04 14:44:57
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-04_14-44-57_screenshot.png]]
+
+Easy to sense some kind of code injection in this challenge. If the web app
+files are downloaded, it's possible to see that it was done in Python, using a
+template engine called =Mako=. Similar to =Jinja2=, we can verify if we can inject
+Python code. Let's test simple math by adding two numbers (=${1+1}=):
+
+
+#+DOWNLOADED: screenshot @ 2025-01-04 14:48:41
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-04_14-48-41_screenshot.png]]
+
+As expected, it worked. Therefore, we can use some known payloads for the =Mako= template engine:
+
+#+BEGIN_SRC python
+${self.module.cache.util.os.popen("COMMAND_HERE").read()}
+#+END_SRC
+
+So, where it says =COMMAND_HERE=, we can just write any kind of shell command to
+get the results. It's possible to use =pwd=, =ls= and =cat= to find and read the
+=flag.txt= file, which is in the root directory:
+
+
+#+DOWNLOADED: screenshot @ 2025-01-04 14:52:45
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-04_14-52-45_screenshot.png]]
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">04-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

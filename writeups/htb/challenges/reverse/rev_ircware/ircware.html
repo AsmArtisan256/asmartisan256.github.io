@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IRCWare</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">IRCWare</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+
+<p>
+As usual, the binary is opened in IDA Pro and I engage into some deep analysis.
+Just by looking at the name, it's easy to assume this binary has something to do
+with IRC.
+</p>
+
+<p>
+And, as expected, the entry point <code>start</code> has all the necessary code to initialize
+a socket and connect. After that, some IRC commands are sent and the usual
+infinite loop starts:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span class="org-type">signed</span> <span class="org-type">__int64</span> <span class="org-function-name">start</span>()
+{
+  getrandom(&amp;aUserIrcwareName[13], 4uLL, 0);
+  <span class="org-comment-delimiter">// </span><span class="org-comment">generate random number</span>
+  *(_DWORD *)&amp;aUserIrcwareName[13] &amp;= 0x7070707u;
+  *(_DWORD *)&amp;aUserIrcwareName[13] |= 0x30303030u;
+  <span class="org-keyword">if</span> ( create_socket_and_connect() &gt;= 0 )
+  {
+    send_command(aUserIrcwareName);
+    send_command(aUserIrcware0Ir);
+    send_command(aJoinSecret);
+    <span class="org-keyword">while</span> ( 1 )                                 <span class="org-comment-delimiter">// </span><span class="org-comment">irc loop</span>
+    {
+      read_command();
+      main_function();
+    }
+  }
+  write(1, aExceptionAbort, count);
+  <span class="org-keyword">return</span> sys_exit(1);
+}
+</pre>
+</div>
+
+<p>
+The loop is as simple as reading the command and executing functions based on
+that command. The commands send in the above code aren't important at all. Now,
+the main function is very big and it has the logic for interpreting the
+following commands:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-nil">PING :
+PRIVMSG #secret :@pass &lt;pass&gt;
+PRIVMSG #secret :@exec &lt;shell_command&gt;
+PRIVMSG #secret :@flag
+</pre>
+</div>
+
+<p>
+If we execute <code>PRIVMSG #secret :@flag</code>, maybe we get the flag. According to the
+function <code>create_socket_and_connect</code>, the socket is created at address <code>127.0.0.1</code>
+and uses port <code>8000</code>. The address comes from <code>16777343</code>, which is <code>0x0100007F</code> in
+big-endian and by reversing the bytes we get <code>0x7F000001</code> which can be translated
+into <code>127.0.0.1</code>. The same can be done for <code>16415</code>, which is translated to <code>8000</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span class="org-type">signed</span> <span class="org-type">__int32</span> <span class="org-function-name">create_socket_and_connect</span>()
+{
+  <span class="org-type">_WORD</span> <span class="org-variable-name">v2</span>[2]; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp-Ch] [rbp-Ch] BYREF</span>
+  <span class="org-type">__int64</span> <span class="org-variable-name">v3</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp-8h] [rbp-8h]</span>
+
+  *(_QWORD *)&amp;fd = sys_socket(2, 1, 0);
+  v3 = 16777343LL;
+  v2[1] = 16415;
+  v2[0] = 2;
+  <span class="org-keyword">return</span> sys_connect(fd, (<span class="org-keyword">struct</span> <span class="org-type">sockaddr</span> *)v2, 16);
+}
+</pre>
+</div>
+
+<p>
+So it's possible to just listen to that address and port and run the binary.
+First we use <code>netcat</code> to listen and then we run the <code>IRCWare</code> binary and then we can
+send commands through <code>netcat</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell">$ nc -l 127.0.0.1 8000
+
+NICK ircware_3523
+USER ircware 0 * :ircware
+JOIN <span class="org-comment-delimiter">#</span><span class="org-comment">secret</span>
+PRIVMSG <span class="org-comment-delimiter">#</span><span class="org-comment">secret :@flag</span>
+PRIVMSG <span class="org-comment-delimiter">#</span><span class="org-comment">secret :Requires password</span>
+</pre>
+</div>
+
+<p>
+As expected, if we send the command to (possibly) get the flag, we get the
+response that a password is required. To insert the password, we got to run the
+command <code>PRIVMSG #secret :@pass &lt;pass&gt;</code>. But what's the password? How can we get
+it? Analyzing the code that runs when we insert a password, it seems that it
+transforms the password in a way that the final string becomes <code>RJJ3DSCP</code>
+(<code>xor_key</code>). So, to find the correct password, we need to do the reverse process,
+going from <code>RJJ3DSCP</code> to the correct input.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c">v14 = (<span class="org-type">unsigned</span> <span class="org-type">__int8</span> *)&amp;v20[aPrivmsgSecretPassLen - 1];
+v15 = xor_key2;
+v16 = xor_key1;
+v17 = 0LL;
+<span class="org-keyword">while</span> ( 1 )
+  {
+    v18 = *v14;
+    *v16 = *v14;
+    <span class="org-keyword">if</span> ( <span class="org-negation-char">!</span>v18 || v18 == 10 || v18 == 13 )
+      <span class="org-keyword">break</span>;
+    <span class="org-keyword">if</span> ( v17 &gt; key_length )
+      <span class="org-keyword">goto</span> <span class="org-constant">LABEL_35</span>;
+    <span class="org-keyword">if</span> ( v18 &gt;= <span class="org-string">'A'</span> &amp;&amp; v18 &lt;= <span class="org-string">'Z'</span> )
+      {
+        v18 += 17;
+        <span class="org-keyword">if</span> ( v18 &gt; <span class="org-string">'Z'</span> )
+          v18 = v18 - 90 + 64;
+      }
+    <span class="org-keyword">if</span> ( *v15 != v18 )
+      <span class="org-keyword">goto</span> <span class="org-constant">LABEL_35</span>;
+    ++v17;
+    ++v16;
+    ++v14;
+    ++v15;
+  }
+</pre>
+</div>
+
+<p>
+We just pick up each valid letter of <code>RJJ3DSCP</code>, except the number <code>3</code>, and subtract
+<code>17</code>. If the value under-flows, we just add <code>26</code>, which comes as a result of <code>90 -
+64</code>. I honestly did this by hand, and the result was <code>ASS3MBLY</code>. And now, if we use
+this as the password, we get the result saying <code>Accepted</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell">PRIVMSG <span class="org-comment-delimiter">#</span><span class="org-comment">secret :@pass ASS3MBLY</span>
+PRIVMSG <span class="org-comment-delimiter">#</span><span class="org-comment">secret :Accepted</span>
+</pre>
+</div>
+
+<p>
+And now, time to call the <code>@flag</code> command again to get the flag!
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">30-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

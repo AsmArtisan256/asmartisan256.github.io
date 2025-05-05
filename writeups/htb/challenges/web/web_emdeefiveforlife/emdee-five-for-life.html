@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Emdee Five for Life</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Emdee Five for Life</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+<p>
+In this challenge we are presented with a webpage that has a string that should
+be hashed using MD5 and then submitted. When we test manually, and submit the
+MD5 hash, we are presented with the same screen with an extra string saying <code>Too
+slow!</code>. I guess we can always write a script to submit the hash as fast as we
+can. So we can write a Bash Script like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/</span><span class="org-keyword">sh</span>
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">We get the first string to hash</span>
+<span class="org-variable-name">FIRSTHASH</span>=$(curl-s http://209.97.138.240:32106/ | xmllint --html --format --xpath <span class="org-string">"//h3/text()"</span> - 2&gt; /dev/null)
+
+<span class="org-keyword">while </span><span class="org-builtin">true</span>
+<span class="org-keyword">do</span>
+        <span class="org-comment-delimiter"># </span><span class="org-comment">we hash the string</span>
+        <span class="org-variable-name">MD5</span>=$(md5str $<span class="org-variable-name">FIRSTHASH</span>)
+        <span class="org-comment-delimiter"># </span><span class="org-comment">we execute CURL and save XML</span>
+        <span class="org-variable-name">XML</span>=$(curl-X POST --data <span class="org-string">"hash=$MD5"</span> http://209.97.138.240:32106/)
+        <span class="org-builtin">echo</span> $<span class="org-variable-name">XML</span>
+
+        <span class="org-comment-delimiter"># </span><span class="org-comment">we get a new string to hash for the next iteration</span>
+        <span class="org-variable-name">FIRSTHASH</span>=$(<span class="org-builtin">echo</span> $<span class="org-variable-name">XML</span> | xmllint --html --format --xpath <span class="org-string">"//h3/text()"</span> - 2&gt; /dev/null)
+<span class="org-keyword">done</span>
+</pre>
+</div>
+
+<p>
+The <code>md5str</code> is a script of mine also:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/</span><span class="org-keyword">sh</span>
+<span class="org-builtin">echo</span> -n $<span class="org-variable-name">1</span> | md5sum | awk <span class="org-string">'{print $1}'</span>
+</pre>
+</div>
+
+<p>
+The script could be better, but it does the job. When we run the script, we can
+see the output of the XML being echoed into the terminal.
+</p>
+
+<p>
+For some reason, it still has the same string <code>Too slow!</code>.
+</p>
+
+<p>
+Could it be the script that is actually very slow? Does this challenge need
+1GBit internet to be solved?
+</p>
+
+<p>
+Well, if we look up closely after doing a request to the website in the browser,
+we can see that there is a session Cookie being used called <code>PHPSESSID</code> that is
+always different when we do the request through cURL. So the trick here is to
+actually use the same cookie value.
+</p>
+
+<p>
+We can change the script to accommodate this needed change:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span class="org-comment-delimiter">#</span><span class="org-comment">!/bin/</span><span class="org-keyword">sh</span>
+
+<span class="org-comment-delimiter"># </span><span class="org-comment">we added --cookie-jar cookies to save cookies to file called `cookies`</span>
+<span class="org-variable-name">FIRSTHASH</span>=$(curl --cookie-jar cookies -s http://209.97.138.240:32106/ | xmllint --html --format --xpath <span class="org-string">"//h3/text()"</span> - 2&gt; /dev/null)
+
+<span class="org-keyword">while </span><span class="org-builtin">true</span>
+<span class="org-keyword">do</span>
+        <span class="org-variable-name">MD5</span>=$(md5str $<span class="org-variable-name">FIRSTHASH</span>)
+        <span class="org-comment-delimiter"># </span><span class="org-comment">we load the `cookies` file here</span>
+        <span class="org-variable-name">XML</span>=$(curl -b cookies -X POST --data <span class="org-string">"hash=$MD5"</span> http://209.97.138.240:32106/)
+        <span class="org-comment-delimiter">#</span><span class="org-comment">echo $MD5</span>
+        <span class="org-builtin">echo</span> $<span class="org-variable-name">XML</span>
+
+        <span class="org-variable-name">FIRSTHASH</span>=$(<span class="org-builtin">echo</span> $<span class="org-variable-name">XML</span> | xmllint --html --format --xpath <span class="org-string">"//h3/text()"</span> - 2&gt; /dev/null)
+<span class="org-keyword">done</span>
+</pre>
+</div>
+
+<p>
+Now we just run the script again and the flag will appear instead of the usual
+text <code>Too slow!</code>.
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">16-01-2021</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

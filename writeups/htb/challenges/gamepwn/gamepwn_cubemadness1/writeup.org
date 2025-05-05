@@ -1,0 +1,103 @@
+:PROPERTIES:
+:ID:       e71e9828-f578-454a-9128-cf780cfed75e
+:END:
+#+TITLE: CubeMadness1
+#+AUTHOR: AsmArtisan256
+#+DATE: 03-02-2025
+
+#+OPTIONS: html-style:nil
+#+OPTIONS: html-scripts:nil
+
+#+OPTIONS: author:nil
+#+OPTIONS: email:nil
+#+OPTIONS: date:t
+#+OPTIONS: toc:nil
+
+#+PROPERTY: header-args :eval no
+
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/style.css"/>
+
+#+EXPORT_FILE_NAME: cubemadness1
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+#+TOC: headlines 2
+
+#+BEGIN_EXPORT html
+<p class="spacing-64" \>
+#+END_EXPORT
+
+
+This game, like most, is an =EXE= file I have to run under Wine or Proton. Looks
+like a simple game, where you have to collect the well known HTB cubes. You have
+to collect 20 of them, but jumping around, I could only get 6 of them.
+
+#+DOWNLOADED: screenshot @ 2025-02-03 18:30:19
+#+attr_org: :width 600px
+[[file:writeup-img/2025-02-03_18-30-19_screenshot.png]]
+
+How can we get all of them? Going around the "jail" the ball is in, there are no
+more cubes to collect, so it's time to call the classic tool for game hacking:
+=Cheat Engine=. Being under GNU/Linux and Proton is not issue since I use
+=protontricks-launch= to launch an executable file in the same environment the
+game is running in. If that does not work (i.e. you can't read the addresses),
+you have to use a very manual command to run =Cheat Engine=:
+
+#+BEGIN_SRC shell
+STEAM_COMPAT_CLIENT_INSTALL_PATH=~/.steam/ STEAM_COMPAT_DATA_PATH=~/.steam/steam/steamapps/compatdata/<APP_ID>/ WINEPREFIX=~/.steam/steam/steamapps/compatdata/<APP_ID>/pfx <PATH_TO_PROTON>/proton run cheatengine-x86_64.exe
+#+END_SRC
+
+
+#+DOWNLOADED: screenshot @ 2025-02-03 18:35:27
+#+attr_org: :width 600px
+[[file:writeup-img/2025-02-03_18-35-27_screenshot.png]]
+
+So, after attaching =Cheat Engine= to the game, we start using the classic
+technique everybody familiar with the tool knows. We start searching the memory
+for the value =0=. We get so many addresses so we have to narrow it down! We catch
+a cube and search for the value =1= and we still get too many addresses. I only
+got it right after getting the 4th cube and searching for the value =4=.
+
+
+#+DOWNLOADED: screenshot @ 2025-02-03 19:00:25
+#+attr_org: :width 600px
+[[file:writeup-img/2025-02-03_19-00-25_screenshot.png]]
+
+
+Since I only got 3 addresses with the value =4=, which seems to match the points
+in the game, we copy those addresses to the Cheat Engine address list, freeze
+them and set their value to =20= and the flag appears instantly in the game.
+
+
+#+DOWNLOADED: screenshot @ 2025-02-03 19:06:26
+#+attr_org: :width 600px
+[[file:writeup-img/2025-02-03_19-06-26_screenshot.png]]
+
+
+* FOOTER                                                                                              :ignore:
+:PROPERTIES:
+:clearpage: t
+:END:
+#+BEGIN_EXPORT html
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">03-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+#+END_EXPORT

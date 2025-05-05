@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Computational Recruiting</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Computational Recruiting</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+
+<p>
+After starting the challenge instance and connecting through <code>netcat</code>, we get the
+following information:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-nil">You will be given a file with N = 200 different potential candidates. Every candidates has 6 different skills, with a score 1 &lt;= s &lt;= 10 for each.
+The formulas to calculate their general value are:
+        &lt;skill&gt;_score = round(6 * (int(s) * &lt;skill&gt;_weight)) + 10
+        overall_value = round(5 * ((health * 0.18) + (agility * 0.20) + (charisma * 0.21) + (knowledge * 0.08) + (energy * 0.17) + (resourcefulness * 0.16)))
+        Note: The round() function here is Python 3's round(), which uses a concept called Banker's Rounding
+The weights for the 6 skills are: health_weight = 0.2, agility_weight = 0.3, charisma_weight = 0.1, knowledge_weight = 0.05, energy_weight = 0.05, resourcefulness_weight = 0.3
+Enter the first 14 candidates ordered in the highest overall values.
+Enter them like so: Name_1 Surname_1 - score_1, Name_2 Surname_2 - score_2, ..., Name_i Surname_i - score_i
+        e.g. Timothy Pempleton - 94, Jimmy Jones - 92, Randolf Ray - 92, ...
+</pre>
+</div>
+
+<p>
+The file is given by the challenge through the <code>Download Files</code> button and it
+contains all the information listed above for all 200 candidates.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-nil"> ============ ============== ======== ========= ========== =========== ======== =================
+  First Name    Last Name     Health   Agility   Charisma   Knowledge   Energy   Resourcefulness
+ ============ ============== ======== ========= ========== =========== ======== =================
+  Alis         Reeson              2         5          5           8        7                10
+  Gerri        Bielfelt            8         9          3           8        5                 9
+  Wolfie       Appleby             5         1          2           7        2                 1
+...
+  Rusty        Ardern             10        10          2          10        6                 1
+  Nikaniki     Overall             3         6          7           7        6                 5
+ ============ ============== ======== ========= ========== =========== ======== =================
+
+</pre>
+</div>
+
+<p>
+So, all it is needed is to write a script that parses the list, uses both
+formulas to calculate the final overall value to then sort and print the list of
+the 14 best candidates:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span class="org-keyword">def</span> <span class="org-function-name">read_people</span>(file_path):
+    <span class="org-variable-name">people</span> <span class="org-operator">=</span> []
+
+    <span class="org-keyword">with</span> <span class="org-builtin">open</span>(file_path, <span class="org-string">'r'</span>) <span class="org-keyword">as</span> f:
+        <span class="org-variable-name">lines</span> <span class="org-operator">=</span> f.readlines()
+
+    <span class="org-variable-name">data_lines</span> <span class="org-operator">=</span> lines[3:<span class="org-operator">-</span>1]
+
+    <span class="org-keyword">for</span> line <span class="org-keyword">in</span> data_lines:
+        <span class="org-variable-name">line</span> <span class="org-operator">=</span> line.strip()
+        <span class="org-keyword">if</span> <span class="org-keyword">not</span> line:
+            <span class="org-keyword">continue</span>
+
+        <span class="org-variable-name">parts</span> <span class="org-operator">=</span> line.split()
+
+        <span class="org-keyword">try</span>:
+            <span class="org-variable-name">person</span> <span class="org-operator">=</span> {
+                <span class="org-string">'first_name'</span>: parts[0],
+                <span class="org-string">'last_name'</span>: parts[1],
+                <span class="org-string">'health'</span>: <span class="org-builtin">int</span>(parts[2]),
+                <span class="org-string">'agility'</span>: <span class="org-builtin">int</span>(parts[3]),
+                <span class="org-string">'charisma'</span>: <span class="org-builtin">int</span>(parts[4]),
+                <span class="org-string">'knowledge'</span>: <span class="org-builtin">int</span>(parts[5]),
+                <span class="org-string">'energy'</span>: <span class="org-builtin">int</span>(parts[6]),
+                <span class="org-string">'resourcefulness'</span>: <span class="org-builtin">int</span>(parts[7])
+            }
+
+            people.append(person)
+        <span class="org-keyword">except</span> <span class="org-type">ValueError</span> <span class="org-keyword">as</span> e:
+            <span class="org-builtin">print</span>(f<span class="org-string">"Error processing line '</span>{line}<span class="org-string">': </span>{e}<span class="org-string">"</span>)
+
+    <span class="org-keyword">return</span> people
+
+
+<span class="org-keyword">def</span> <span class="org-function-name">calculate_scores</span>(people):
+    <span class="org-keyword">for</span> person <span class="org-keyword">in</span> people:
+        <span class="org-variable-name">person</span>[<span class="org-string">'health_score'</span>] <span class="org-operator">=</span> <span class="org-builtin">round</span>(6 <span class="org-operator">*</span> (person[<span class="org-string">'health'</span>] <span class="org-operator">*</span> 0.2)) <span class="org-operator">+</span> 10
+        <span class="org-variable-name">person</span>[<span class="org-string">'agility_score'</span>] <span class="org-operator">=</span> <span class="org-builtin">round</span>(6 <span class="org-operator">*</span> (person[<span class="org-string">'agility'</span>] <span class="org-operator">*</span> 0.3)) <span class="org-operator">+</span> 10
+        <span class="org-variable-name">person</span>[<span class="org-string">'charisma_score'</span>] <span class="org-operator">=</span> <span class="org-builtin">round</span>(6 <span class="org-operator">*</span> (person[<span class="org-string">'charisma'</span>] <span class="org-operator">*</span> 0.1)) <span class="org-operator">+</span> 10
+        <span class="org-variable-name">person</span>[<span class="org-string">'knowledge_score'</span>] <span class="org-operator">=</span> <span class="org-builtin">round</span>(6 <span class="org-operator">*</span>
+                                          (person[<span class="org-string">'knowledge'</span>] <span class="org-operator">*</span> 0.05)) <span class="org-operator">+</span> 10
+        <span class="org-variable-name">person</span>[<span class="org-string">'energy_score'</span>] <span class="org-operator">=</span> <span class="org-builtin">round</span>(6 <span class="org-operator">*</span> (person[<span class="org-string">'energy'</span>] <span class="org-operator">*</span> 0.05)) <span class="org-operator">+</span> 10
+        <span class="org-variable-name">person</span>[<span class="org-string">'resourcefulness_score'</span>] <span class="org-operator">=</span> <span class="org-builtin">round</span>(
+            6 <span class="org-operator">*</span> (person[<span class="org-string">'resourcefulness'</span>] <span class="org-operator">*</span> 0.3)) <span class="org-operator">+</span> 10
+
+        <span class="org-variable-name">weighted_sum</span> <span class="org-operator">=</span> (person[<span class="org-string">'health_score'</span>] <span class="org-operator">*</span> 0.18 <span class="org-operator">+</span>
+                        person[<span class="org-string">'agility_score'</span>] <span class="org-operator">*</span> 0.20 <span class="org-operator">+</span>
+                        person[<span class="org-string">'charisma_score'</span>] <span class="org-operator">*</span> 0.21 <span class="org-operator">+</span>
+                        person[<span class="org-string">'knowledge_score'</span>] <span class="org-operator">*</span> 0.08 <span class="org-operator">+</span>
+                        person[<span class="org-string">'energy_score'</span>] <span class="org-operator">*</span> 0.17 <span class="org-operator">+</span>
+                        person[<span class="org-string">'resourcefulness_score'</span>] <span class="org-operator">*</span> 0.16)
+        <span class="org-variable-name">person</span>[<span class="org-string">'overall_value'</span>] <span class="org-operator">=</span> <span class="org-builtin">round</span>(5 <span class="org-operator">*</span> weighted_sum)
+
+    <span class="org-keyword">return</span> people
+
+
+<span class="org-keyword">if</span> <span class="org-builtin">__name__</span> <span class="org-operator">==</span> <span class="org-string">'__main__'</span>:
+    <span class="org-variable-name">people_data</span> <span class="org-operator">=</span> read_people(<span class="org-string">'data.txt'</span>)
+    <span class="org-variable-name">people_with_scores</span> <span class="org-operator">=</span> calculate_scores(people_data)
+
+    <span class="org-variable-name">sorted_people</span> <span class="org-operator">=</span> <span class="org-builtin">sorted</span>(people_with_scores,
+                           key<span class="org-operator">=</span><span class="org-keyword">lambda</span> x: x[<span class="org-string">'overall_value'</span>],
+                           reverse<span class="org-operator">=</span><span class="org-constant">True</span>)
+
+    <span class="org-keyword">for</span> rank, person <span class="org-keyword">in</span> <span class="org-builtin">enumerate</span>(sorted_people[:14], 1):
+        <span class="org-builtin">print</span>(
+            f<span class="org-string">"</span>{person['first_name']}<span class="org-string"> </span>{person['last_name']}<span class="org-string"> - </span>{person['overall_value']}<span class="org-string">, "</span>,
+            end<span class="org-operator">=</span><span class="org-string">''</span>)
+
+</pre>
+</div>
+
+<p>
+Here is the result:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-nil">Jayson Enderby - 98, Malva Shreeve - 96, Randolf Raybould - 96, Shay Sheardown - 95, Koo Rue - 94, Tabina Nathon - 94, Taber Haile - 93, Constanta Rolfs - 93, Corette Bursnell - 93, Gerri Bielfelt - 92, Andy Swane - 91, Colene Vanyatin - 91, Lowe Farnan - 91, Ashlin Neely - 91,
+</pre>
+</div>
+
+<p>
+Just remove the last comma and paste the result in the <code>netcat</code> window to get the
+flag!
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">03-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

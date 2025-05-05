@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Partial Encryption</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Partial Encryption</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+
+<p>
+Another Windows binary, great&#x2026;!
+</p>
+
+<p>
+By analyzing the entry point, the <code>main</code> function is very short and has 4
+important function calls. I already put the "correct" name after analyzing the
+file thoroughly.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c"><span class="org-type">int</span> <span class="org-variable-name">__fastcall</span> main(<span class="org-type">int</span> <span class="org-variable-name">argc</span>, <span class="org-keyword">const</span> <span class="org-type">char</span> **<span class="org-variable-name">argv</span>, <span class="org-keyword">const</span> <span class="org-type">char</span> **<span class="org-variable-name">envp</span>)
+{
+  <span class="org-type">int</span> <span class="org-variable-name">v4</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp+30h] [rbp-18h] BYREF</span>
+  <span class="org-type">int</span> *<span class="org-variable-name">v5</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp+38h] [rbp-10h]</span>
+
+  v4 = 0;
+  v5 = &amp;v4;
+  check_args_and_print_error((<span class="org-type">__int64</span>)putchar, (<span class="org-type">__int64</span>)exit, argc, (<span class="org-type">DWORD</span> *)argv);
+  flag_not_valid_error((<span class="org-type">__int64</span>)putchar, (<span class="org-type">__int64</span>)exit, (<span class="org-type">unsigned</span> <span class="org-type">int</span>)argc, (<span class="org-type">__int64</span>)argv);
+  flag_check((<span class="org-type">_DWORD</span>)putchar, (<span class="org-type">_DWORD</span>)exit, argc, (<span class="org-type">_DWORD</span>)argv, (<span class="org-type">__int64</span>)v5);
+  result_output((<span class="org-type">_DWORD</span>)putchar, (<span class="org-type">_DWORD</span>)exit, argc, (<span class="org-type">_DWORD</span>)argv, (<span class="org-type">__int64</span>)v5);
+  <span class="org-keyword">return</span> 0;
+}
+</pre>
+</div>
+
+<p>
+Every single one of the functions has the same logic, more or less, and all of
+them hide the real logic behind AES encrypted bytes. So, basically, every
+function calls another function to decrypt specific bytes into valid x86
+instructions and the runs as a function pointer. It uses the well known
+<code>VirtualAlloc</code> and <code>VirtualProtect</code> functions to achieve this capability and to turn
+that region into executable code. Here is an example from the binary itself:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c">LPVOID <span class="org-type">__fastcall</span> <span class="org-function-name">compile_aes_function</span>(<span class="org-type">__int64</span> <span class="org-variable-name">bytes</span>, <span class="org-type">int</span> <span class="org-variable-name">n</span>)
+{
+  <span class="org-type">__m128i</span> <span class="org-variable-name">v2</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">xmm0</span>
+  <span class="org-type">__m128i</span> <span class="org-variable-name">v3</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">xmm0</span>
+  <span class="org-type">int</span> <span class="org-variable-name">i</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp+20h] [rbp-38h]</span>
+  <span class="org-type">DWORD</span> <span class="org-variable-name">flOldProtect</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp+24h] [rbp-34h] BYREF</span>
+  <span class="org-type">LPVOID</span> <span class="org-variable-name">lpAddress</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp+28h] [rbp-30h]</span>
+  <span class="org-type">__m128i</span> <span class="org-variable-name">v8</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp+30h] [rbp-28h] BYREF</span>
+  <span class="org-type">__m128i</span> <span class="org-variable-name">v9</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">[rsp+40h] [rbp-18h] BYREF</span>
+
+  lpAddress = VirtualAlloc(0LL, n, 4096u, PAGE_READWRITE);
+  <span class="org-keyword">for</span> ( i = 0; i &lt; n / 16; ++i )
+  {
+    v2 = _mm_cvtsi32_si128((<span class="org-type">char</span>)i);
+    v3 = _mm_unpacklo_epi8(v2, v2);
+    v8 = _mm_shuffle_epi32(_mm_unpacklo_epi16(v3, v3), 0);
+    v9 = _mm_loadu_si128((<span class="org-keyword">const</span> <span class="org-type">__m128i</span> *)(bytes + 16LL * i));
+    *((<span class="org-type">__m128</span> *)lpAddress + i) = sub_140001000(&amp;v9, &amp;v8);
+  }
+  VirtualProtect(lpAddress, n, 0x20u, &amp;flOldProtect);
+  <span class="org-keyword">return</span> lpAddress;
+}
+</pre>
+</div>
+
+<p>
+This is annoying, because I mainly use GNU/Linux and to readily get these bytes
+decrypted, I have to debug on Windows, set the breakpoints at the exact moment
+the instructions are decrypted to then read them. The first two functions this
+isn't even needed, because the first one verifies if <code>argc</code> is not <code>2</code>, therefore,
+we know the binary needs 1 extra argument, and the second one checks if the
+extra argument has 22 characters:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c">...
+
+ <span class="org-keyword">for</span> ( i = 0; i &lt; 22; ++i )
+  {
+    <span class="org-keyword">if</span> ( <span class="org-negation-char">!</span>*(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(argv + 8) + i) )
+
+...
+</pre>
+</div>
+
+<p>
+So, by debugging the code and getting the decrypted instructions, I found the 4
+most important functions to get the flag, all of which are executed in the third
+function call in <code>main</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-c">__int64 <span class="org-type">__fastcall</span> <span class="org-function-name">sub_1E1B6A70000</span>(<span class="org-type">__int64</span> <span class="org-variable-name">a1</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a2</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a3</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a4</span>, <span class="org-type">_DWORD</span> *<span class="org-variable-name">a5</span>)
+{
+  <span class="org-type">__int64</span> <span class="org-variable-name">result</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">rax</span>
+
+  *a5 |= **(<span class="org-type">_BYTE</span> **)(a4 + 8) != <span class="org-string">'H'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 1LL) != <span class="org-string">'T'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 2LL) != <span class="org-string">'B'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 3LL) != <span class="org-string">'{'</span>;
+  result = (<span class="org-type">unsigned</span> <span class="org-type">int</span>)(*(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 21LL) != <span class="org-string">'}'</span>) | *a5;
+  *a5 = result;
+  <span class="org-keyword">return</span> result;
+}
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c">__int64 <span class="org-type">__fastcall</span> <span class="org-function-name">sub_2E002D80000</span>(<span class="org-type">__int64</span> <span class="org-variable-name">a1</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a2</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a3</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a4</span>, <span class="org-type">_DWORD</span> *<span class="org-variable-name">a5</span>)
+{
+  <span class="org-type">__int64</span> <span class="org-variable-name">result</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">rax</span>
+
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 4LL) != <span class="org-string">'W'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 5LL) != <span class="org-string">'3'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 6LL) != <span class="org-string">'i'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 7LL) != <span class="org-string">'R'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 8LL) != <span class="org-string">'d'</span>;
+  result = (<span class="org-type">unsigned</span> <span class="org-type">int</span>)(*(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 9LL) != <span class="org-string">'_'</span>) | *a5;
+  *a5 = result;
+  <span class="org-keyword">return</span> result;
+}
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c">__int64 <span class="org-type">__fastcall</span> <span class="org-function-name">sub_1C511D10000</span>(<span class="org-type">__int64</span> <span class="org-variable-name">a1</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a2</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a3</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a4</span>, <span class="org-type">_DWORD</span> *<span class="org-variable-name">a5</span>)
+{
+  <span class="org-type">__int64</span> <span class="org-variable-name">result</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">rax</span>
+
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 10LL) != <span class="org-string">'R'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 11LL) != <span class="org-string">'U'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 12LL) != <span class="org-string">'n'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 13LL) != <span class="org-string">'T'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 14LL) != <span class="org-string">'1'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 15LL) != <span class="org-string">'m'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 16LL) != <span class="org-string">'3'</span>;
+  result = (<span class="org-type">unsigned</span> <span class="org-type">int</span>)(*(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 17LL) != <span class="org-string">'_'</span>) | *a5;
+  *a5 = result;
+  <span class="org-keyword">return</span> result;
+}
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-c">__int64 <span class="org-type">__fastcall</span> <span class="org-function-name">sub_25BCB6E0000</span>(<span class="org-type">__int64</span> <span class="org-variable-name">a1</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a2</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a3</span>, <span class="org-type">__int64</span> <span class="org-variable-name">a4</span>, <span class="org-type">_DWORD</span> *<span class="org-variable-name">a5</span>)
+{
+  <span class="org-type">__int64</span> <span class="org-variable-name">result</span>; <span class="org-comment-delimiter">// </span><span class="org-comment">rax</span>
+
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 18LL) != <span class="org-string">'D'</span>;
+  *a5 |= *(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 19LL) != <span class="org-string">'E'</span>;
+  result = (<span class="org-type">unsigned</span> <span class="org-type">int</span>)(*(<span class="org-type">_BYTE</span> *)(*(<span class="org-type">_QWORD</span> *)(a4 + 8) + 20LL) != <span class="org-string">'C'</span>) | *a5;
+  *a5 = result;
+  <span class="org-keyword">return</span> result;
+}
+</pre>
+</div>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">01-02-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-05 Mon 21:34 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Locked Away</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Locked Away</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+<p>
+After downloading the files, we are presented with a very short <code>Python</code> script
+which asks for your input in an infinite loop.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span class="org-keyword">def</span> <span class="org-function-name">open_chest</span>():
+    <span class="org-keyword">with</span> <span class="org-builtin">open</span>(<span class="org-string">'flag.txt'</span>, <span class="org-string">'r'</span>) <span class="org-keyword">as</span> f:
+        <span class="org-builtin">print</span>(f.read())
+
+
+<span class="org-variable-name">blacklist</span> <span class="org-operator">=</span> [
+    <span class="org-string">'import'</span>, <span class="org-string">'os'</span>, <span class="org-string">'sys'</span>, <span class="org-string">'breakpoint'</span>,
+    <span class="org-string">'flag'</span>, <span class="org-string">'txt'</span>, <span class="org-string">'read'</span>, <span class="org-string">'eval'</span>, <span class="org-string">'exec'</span>,
+    <span class="org-string">'dir'</span>, <span class="org-string">'print'</span>, <span class="org-string">'subprocess'</span>, <span class="org-string">'['</span>, <span class="org-string">']'</span>,
+    <span class="org-string">'echo'</span>, <span class="org-string">'cat'</span>, <span class="org-string">'&gt;'</span>, <span class="org-string">'&lt;'</span>, <span class="org-string">'"'</span>, <span class="org-string">'</span><span class="org-constant">\'</span><span class="org-string">'</span>, <span class="org-string">'open'</span>
+]
+
+<span class="org-builtin">print</span>(banner)
+
+<span class="org-keyword">while</span> <span class="org-constant">True</span>:
+    <span class="org-variable-name">command</span> <span class="org-operator">=</span> <span class="org-builtin">input</span>(<span class="org-string">'The chest lies waiting... '</span>)
+
+    <span class="org-keyword">if</span> <span class="org-builtin">any</span>(b <span class="org-keyword">in</span> command <span class="org-keyword">for</span> b <span class="org-keyword">in</span> blacklist):
+        <span class="org-builtin">print</span>(<span class="org-string">'Invalid command!'</span>)
+        <span class="org-keyword">continue</span>
+
+    <span class="org-keyword">try</span>:
+        <span class="org-builtin">exec</span>(command)
+    <span class="org-keyword">except</span> <span class="org-type">Exception</span>:
+        <span class="org-builtin">print</span>(<span class="org-string">'You have been locked away...'</span>)
+        <span class="org-constant">exit</span>(1337)
+</pre>
+</div>
+
+<p>
+Every command the user enters, if not blocked by the blacklist, goes through the
+<code>exec</code> function, which basically executes any <code>Python</code> code you want. Here is an example:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span class="org-builtin">exec</span>(<span class="org-string">'print("hello world!")'</span>)
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-nil">hello world!
+</pre>
+</div>
+
+<p>
+It just executed the <code>Python</code> code we passed to the function as a string. So all
+we have to do is execute the <code>open_chest()</code> function! But it's not that easy. The
+function name has a word that is in the blacklist, therefore, it won't execute
+the method, but since we can execute any <code>Python</code> code, within limits, we can just
+clear the blacklist. Obviously, doing <code>blacklist = []</code> won't work because square
+brackets are in the blacklist, rather, we can use the method <code>clear()</code> by doing
+<code>blacklist.clear()</code>. Now the blacklist is empty, and we can just execute
+<code>open_chest()</code> to get the flag!
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/htb/index.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">12-01-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>
