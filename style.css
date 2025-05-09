@@ -210,6 +210,23 @@ li ul li ul li::marker {
   }
 }
 
+.tags {
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.tag {
+    padding: 6px 10px;
+    font-size: 14px;
+    color: #fbf1c7;
+    background: var(--bg1);
+    border-radius: 12px;
+    white-space: nowrap;
+    display: inline-block;
+    line-height: 1.25;
+}
+
 .gap {
   gap: var(--gapSize);
 }

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2025-05-10 Sat 00:27 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Planetary Storage</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Planetary Storage</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+<p>
+The <code>ZIP</code> file of this challenge contains multiple files. Log files, backup files
+and <code>ldb</code> files. These <code>ldb</code> files seem to be Microsoft Access lock information
+files, something I didn't know, actually. The biggest files are the <code>ldb</code> ones,
+while the rest is very small. The log file is also big but doesn't have anything
+interesting.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">$ stat -c <span class="org-string">"%y %s %n"</span> -- *
+2025-02-07 00:20:58.000000000 +0000 3784 000002.ldb
+2025-02-07 00:20:58.000000000 +0000 1545 000007.ldb
+2025-02-07 00:20:58.000000000 +0000 1421 000010.ldb
+2025-02-07 00:20:58.000000000 +0000 0 000011.log
+2025-02-07 00:20:58.000000000 +0000 16 CURRENT
+2025-02-07 00:20:58.000000000 +0000 16 CURRENT.bak
+2025-02-07 00:20:58.000000000 +0000 0 LOCK
+2025-02-07 00:20:58.000000000 +0000 2966 LOG
+2025-02-07 00:20:58.000000000 +0000 229 MANIFEST-000012
+</pre>
+</div>
+
+<p>
+Opening these <code>ldb</code> files in an hex editor, it's possible to see <code>JSON</code> strings with
+a field called <code>payload</code> where the value was in <code>base64</code>. Picking up on the one in
+the file <code>000002.ldb</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span class="org-builtin">echo</span> <span class="org-string">"eyJrZXkiOiJcIjdiZjFjNTRlLTA5MjAtNGU2Zi1iNTBiLTE0ZDgzODY3NDdmN1wiIiwib3AiOiJQVVQiLCJ2YWx1ZSI6ImV5SmtZWFJoSWpwYklsUm9hWE1pTENKcGN5SXNJbUVpTENKeVpXUWlMQ0pvWlhKeWFXNW5JU0pkTENKcFpDSTZJbHdpTjJKbU1XTTFOR1V0TURreU1DMDBaVFptTFdJMU1HSXRNVFJrT0RNNE5qYzBOMlkzWENJaWZRPT0ifQ=="</span> | base64 -d | jq
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-js">{
+    <span class="org-string">"key"</span>: <span class="org-string">"\"7bf1c54e-0920-4e6f-b50b-14d8386747f7\""</span>,
+    <span class="org-string">"op"</span>: <span class="org-string">"PUT"</span>,
+    <span class="org-string">"value"</span>: <span class="org-string">"eyJkYXRhIjpbIlRoaXMiLCJpcyIsImEiLCJyZWQiLCJoZXJyaW5nISJdLCJpZCI6IlwiN2JmMWM1NGUtMDkyMC00ZTZmLWI1MGItMTRkODM4Njc0N2Y3XCIifQ=="</span>
+}
+</pre>
+</div>
+
+<p>
+The <code>base64</code> contains more <code>JSON</code> that contains <b>more</b> <code>JSON</code>.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh"><span class="org-builtin">echo</span> <span class="org-string">"eyJkYXRhIjpbIlRoaXMiLCJpcyIsImEiLCJyZWQiLCJoZXJyaW5nISJdLCJpZCI6IlwiN2JmMWM1NGUtMDkyMC00ZTZmLWI1MGItMTRkODM4Njc0N2Y3XCIifQ=="</span> | base64 -d | jq
+</pre>
+</div>
+
+<div class="org-src-container">
+<pre class="src src-js">{
+  <span class="org-string">"data"</span>: [
+    <span class="org-string">"This"</span>,
+    <span class="org-string">"is"</span>,
+    <span class="org-string">"a"</span>,
+    <span class="org-string">"red"</span>,
+    <span class="org-string">"herring!"</span>
+  ],
+  <span class="org-string">"id"</span>: <span class="org-string">"\"7bf1c54e-0920-4e6f-b50b-14d8386747f7\""</span>
+}
+</pre>
+</div>
+
+<p>
+Nothing interesting at all here! But by checking and doing the same on the file
+<code>000010.ldb</code>, you can get the flag! Honestly, this challenge was possible to solve
+just by looking at the files. A lot of <code>base64</code>, I was lucky enough to try and
+check the <code>payload</code> keys in the <code>JSON</code> strings that were in those files.
+</p>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/writeups.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">07-05-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>
