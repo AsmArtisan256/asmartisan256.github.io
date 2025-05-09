@@ -403,6 +403,13 @@ pre {
   border-radius: 4px;
   padding: 20px;
   margin: 32px 0px 32px 0px;
+  /* NOTE: this is here because of code not having a margin to the right */
+  display: flex;
+}
+
+/* NOTE: this is here because of code not having a margin to the right */
+span[class^='org'], span[class*=' org']{
+  display: contents;
 }
 
 .figure {
