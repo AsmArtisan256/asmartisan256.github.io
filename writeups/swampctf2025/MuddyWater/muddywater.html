@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MuddyWater</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="/style.css"/>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">MuddyWater</h1>
+<p class="spacing-64" \>
+
+<p class="spacing-64" \>
+
+<p>
+For this challenge, we have to analyze a 35 megabyte <code>PCAP</code> file. Opening it up on
+Wireshark, it's possible to see that it has over 95.000 entries, 42% of them are
+related to the <code>SMB</code> / <code>SMB2</code> protocols. There are a bunch of sequential
+authentication attempts with a lot of different usernames. This challenge's flag
+requires a username and a password, therefore, there has to be a user here that
+did go through the authentication process.
+</p>
+
+
+
+<div id="orgb202055" class="figure">
+<p><img src="writeup-img/2025-05-11_00-17-40_screenshot.png" alt="2025-05-11_00-17-40_screenshot.png" />
+</p>
+</div>
+
+
+<p>
+After all the requests, there is always a response with the error
+<code>STATUS_LOGON_FAILURE</code>. This error comes from the <code>NT Status</code> value, in this case,
+<code>0xc000006d</code>. Looking at the <a href="https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-erref/596a1078-e883-4972-9bbc-49e60bebca55">documentation</a>, the success code is <code>0x00000000</code>. Using
+the Wireshark filter <code>smb2.nt_status == 0x00000000</code>, we can see all the responses
+that didn't error out. This query will return 9110 entries, it's still a lot.
+Every entry is similar and is related to the protocol negotiation, except one:
+</p>
+
+
+
+<div id="org47b3e4c" class="figure">
+<p><img src="writeup-img/2025-05-11_00-28-09_screenshot.png" alt="2025-05-11_00-28-09_screenshot.png" />
+</p>
+</div>
+
+<p>
+And this entry also has the account and domain: <code>hackbackzip</code> and <code>DESKTOP-0TNOE4V</code>
+respectively. Taking into account the nature of <code>NTLMv2</code>, there won't be any kind
+of passwords in plain text here. So the next step is to actually build the
+necessary string for it to serve as the input into a password cracker. It has
+the following format:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-nil">username::domain:challenge:NTProofStr:blob
+</pre>
+</div>
+
+<p>
+We already got the username and the domain. The challenge is in a previous
+request that has an error like <code>NTLMSSP_CHALLENGE</code>:
+</p>
+
+
+
+<div id="orge2f651b" class="figure">
+<p><img src="writeup-img/2025-05-11_00-43-27_screenshot.png" alt="2025-05-11_00-43-27_screenshot.png" />
+</p>
+</div>
+
+<p>
+And the <code>NTProofStr</code> and the <code>blob</code> are in the <code>NTLMSSP_AUTH</code> request of the user
+<code>hackbackzip</code>:
+</p>
+
+
+
+<div id="org52e224c" class="figure">
+<p><img src="writeup-img/2025-05-11_00-44-50_screenshot.png" alt="2025-05-11_00-44-50_screenshot.png" />
+</p>
+</div>
+
+<p>
+This is the resulting string, that should be put in an empty text file in a
+single line:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-nil">hackbackzip::DESKTOP-0TNOE4V:d102444d56e078f4:eb1b0afc1eef819c1dccd514c9623201:01010000000000006f233d3d9f9edb01755959535466696d0000000002001e004400450053004b0054004f0050002d00300054004e004f0045003400560001001e004400450053004b0054004f0050002d00300054004e004f0045003400560004001e004400450053004b0054004f0050002d00300054004e004f0045003400560003001e004400450053004b0054004f0050002d00300054004e004f00450034005600070008006f233d3d9f9edb010900280063006900660073002f004400450053004b0054004f0050002d00300054004e004f004500340056000000000000000000
+</pre>
+</div>
+
+<p>
+Now it's only a matter of using a password cracker with a decent word list. I
+recommend the <code>rockyou.txt</code> word list:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">john --format=netntlmv2 account.txt --wordlist=rockyou.txt
+</pre>
+</div>
+<hr>
+<footer>
+  <div class="container">
+    <ul class="menu-list">
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/index.html">Home</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/articles/articles.html">Articles</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a href="/writeups/writeups.html">Write-Ups</a>
+      </li>
+      <li class="menu-list-item flex-basis-100-margin fit-content">
+        <a class="inactive-link">10-05-2025</a>
+      </li>
+    </ul>
+  </div>
+</footer>
+</div>
+</body>
+</html>
