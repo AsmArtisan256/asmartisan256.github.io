@@ -181,7 +181,7 @@ __int64 __fastcall sub_25BCB6E0000(__int64 a1, __int64 a2, __int64 a3, __int64 a
         <a href="/articles/articles.html">Articles</a>
       </li>
       <li class="menu-list-item flex-basis-100-margin fit-content">
-        <a href="/writeups/htb/index.html">Write-Ups</a>
+        <a href="/writeups/writeups.html">Write-Ups</a>
       </li>
       <li class="menu-list-item flex-basis-100-margin fit-content">
         <a class="inactive-link">01-02-2025</a>

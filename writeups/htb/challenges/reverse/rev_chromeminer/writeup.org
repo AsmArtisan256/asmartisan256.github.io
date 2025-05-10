@@ -135,7 +135,7 @@ can do this in Python or even use any web tool and you will get the flag!
         <a href="/articles/articles.html">Articles</a>
       </li>
       <li class="menu-list-item flex-basis-100-margin fit-content">
-        <a href="/writeups/htb/index.html">Write-Ups</a>
+        <a href="/writeups/writeups.html">Write-Ups</a>
       </li>
       <li class="menu-list-item flex-basis-100-margin fit-content">
         <a class="inactive-link">01-02-2025</a>

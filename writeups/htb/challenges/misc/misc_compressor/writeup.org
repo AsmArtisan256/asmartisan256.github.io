@@ -97,7 +97,7 @@ Now there's an empty line, where it's possible to run shell commands:
         <a href="/articles/articles.html">Articles</a>
       </li>
       <li class="menu-list-item flex-basis-100-margin fit-content">
-        <a href="/writeups/htb/index.html">Write-Ups</a>
+        <a href="/writeups/writeups.html">Write-Ups</a>
       </li>
       <li class="menu-list-item flex-basis-100-margin fit-content">
         <a class="inactive-link">12-01-2025</a>

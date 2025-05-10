@@ -257,7 +257,7 @@ get the root flag.
         <a href="/articles/articles.html">Articles</a>
       </li>
       <li class="menu-list-item flex-basis-100-margin fit-content">
-        <a href="/writeups/htb/index.html">Write-Ups</a>
+        <a href="/writeups/writeups.html">Write-Ups</a>
       </li>
       <li class="menu-list-item flex-basis-100-margin fit-content">
         <a class="inactive-link">08-02-2021</a>
