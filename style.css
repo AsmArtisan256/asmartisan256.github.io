@@ -405,6 +405,8 @@ pre {
   margin: 32px 0px 32px 0px;
   /* NOTE: this is here because of code not having a margin to the right */
   display: flex;
+  /* NOTE: force font to be bigger */
+  font-size: 14px;
 }
 
 /* NOTE: this is here because of code not having a margin to the right */
