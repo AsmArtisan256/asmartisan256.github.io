@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2025-05-10 Sat 00:27 -->
+<!-- 2025-05-10 Sat 01:30 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Insomnia</title>
@@ -19,7 +19,7 @@ I'm greeted with a website that has multiple pages, such as <code>Home</code>, <
 </p>
 
 
-<div id="org751be90" class="figure">
+<div id="org31b7837" class="figure">
 <p><img src="writeup-img/2025-01-07_21-19-08_screenshot.png" alt="2025-01-07_21-19-08_screenshot.png" />
 </p>
 </div>
@@ -31,7 +31,7 @@ And now I can login:
 
 
 
-<div id="org5dccefb" class="figure">
+<div id="org68aa849" class="figure">
 <p><img src="writeup-img/2025-01-07_21-19-44_screenshot.png" alt="2025-01-07_21-19-44_screenshot.png" />
 </p>
 </div>
@@ -47,10 +47,10 @@ reads the flag and prints it out! But I have to be the user called
 </p>
 
 <div class="org-src-container">
-<pre class="src src-php">if ($username == "administrator") {
-    return view("ProfilePage", [
-      "username" =&gt; $username,
-      "content" =&gt; $flag,
+<pre class="src src-php"><span class="org-php-keyword">if</span> (<span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">username</span> <span class="org-php-comparison-op">==</span> <span class="org-php-string">"administrator"</span>) {
+    <span class="org-php-keyword">return</span> <span class="org-php-function-call-traditional">view</span>(<span class="org-php-string">"ProfilePage"</span>, [
+      <span class="org-php-string">"username"</span> <span class="org-php-assignment-op">=</span><span class="org-php-comparison-op">&gt;</span> <span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">username</span>,
+      <span class="org-php-string">"content"</span> <span class="org-php-assignment-op">=</span><span class="org-php-comparison-op">&gt;</span> <span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">flag</span>,
     ]);
 }
 </pre>
@@ -123,17 +123,17 @@ verifying if it has username and password and so on:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-php">public function login()
+<pre class="src src-php"><span class="org-php-keyword">public</span> <span class="org-php-keyword">function</span> <span class="org-php-function-name">login</span>()
 {
-    $db = db_connect();
-    $json_data = request()-&gt;getJSON(true);
-    if (!count($json_data) == 2) {
-        return $this-&gt;respond("Please provide username and password", 404);
+    <span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">db</span> <span class="org-php-assignment-op">=</span> <span class="org-php-function-call-traditional">db_connect</span>();
+    <span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">json_data</span> <span class="org-php-assignment-op">=</span> <span class="org-php-function-call-traditional">request</span>()<span class="org-php-object-op">-&gt;</span><span class="org-php-method-call-traditional">getJSON</span>(<span class="org-php-constant">true</span>);
+    <span class="org-php-keyword">if</span> (<span class="org-php-logical-op">!</span><span class="org-php-function-call-traditional">count</span>(<span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">json_data</span>) <span class="org-php-comparison-op">==</span> 2) {
+        <span class="org-php-keyword">return</span> <span class="org-php-this-sigil">$</span><span class="org-php-this">this</span><span class="org-php-object-op">-&gt;</span><span class="org-php-method-call-traditional">respond</span>(<span class="org-php-string">"Please provide username and password"</span>, 404);
     }
-    $query = $db-&gt;table("users")-&gt;getWhere($json_data, 1, 0);
-    $result = $query-&gt;getRowArray();
+    <span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">query</span> <span class="org-php-assignment-op">=</span> <span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">db</span><span class="org-php-object-op">-&gt;</span><span class="org-php-method-call-traditional">table</span>(<span class="org-php-string">"users"</span>)<span class="org-php-object-op">-&gt;</span><span class="org-php-method-call-traditional">getWhere</span>(<span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">json_data</span>, 1, 0);
+    <span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">result</span> <span class="org-php-assignment-op">=</span> <span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">query</span><span class="org-php-object-op">-&gt;</span><span class="org-php-method-call-traditional">getRowArray</span>();
 
-    ................
+    <span class="org-comment-delimiter">// </span><span class="org-comment">................</span>
 }
 </pre>
 </div>
@@ -146,15 +146,15 @@ function call makes all the difference:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-php">$c[0] = 1;
-var_dump(count($c));
+<pre class="src src-php"><span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">c</span>[0] <span class="org-php-assignment-op">=</span> 1;
+<span class="org-php-function-call-traditional">var_dump</span>(<span class="org-php-function-call-traditional">count</span>(<span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">c</span>));
 
-// =&gt; int(1)
+<span class="org-comment-delimiter">// </span><span class="org-comment">=&gt; int(1)</span>
 
-$c[0] = 1;
-var_dump(!count($c));
+<span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">c</span>[0] <span class="org-php-assignment-op">=</span> 1;
+<span class="org-php-function-call-traditional">var_dump</span>(<span class="org-php-logical-op">!</span><span class="org-php-function-call-traditional">count</span>(<span class="org-php-variable-sigil">$</span><span class="org-php-variable-name">c</span>));
 
-// =&gt; bool(false)
+<span class="org-comment-delimiter">// </span><span class="org-comment">=&gt; bool(false)</span>
 </pre>
 </div>
 

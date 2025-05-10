@@ -110,7 +110,7 @@ public function login()
     $query = $db->table("users")->getWhere($json_data, 1, 0);
     $result = $query->getRowArray();
 
-    ................
+    // ................
 }
 #+END_SRC
 
