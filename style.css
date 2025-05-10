@@ -467,10 +467,6 @@ code {
   word-break: break-word;
 }
 
-.org-ul {
-  margin-left: 32px;
-}
-
 #text-table-of-contents {
   margin-left: 16px;
 }
@@ -484,10 +480,6 @@ table {
   margin-right: auto;
   margin-top: 32px;
   margin-bottom: 32px;
-}
-
-.org-left {
-  text-align: center;
 }
 
 .warning {
@@ -515,6 +507,14 @@ table {
 }
 
 /* org-mode code */
+.org-ul {
+  margin-left: 32px;
+}
+
+.org-left {
+  text-align: center;
+}
+
 .org-comment-delimiter {
   color: var(--gray8);
 }
@@ -524,17 +524,20 @@ table {
 }
 
 .org-keyword,
-.org-vimrc-command {
+.org-vimrc-command,
+.org-php-keyword {
   color: var(--redl);
 }
 
 .org-variable-name,
 .org-vimrc-option,
-.org-nasm-registers {
+.org-nasm-registers,
+.org-php-variable-name {
   color: var(--bluel);
 }
 
-.org-string {
+.org-string,
+.org-php-string {
   color: var(--greenl);
 }
 
@@ -545,7 +548,8 @@ table {
 }
 
 .org-function-name,
-.org-nasm-local-labels {
+.org-nasm-local-labels,
+.org-php-function-name {
   color: var(--yellowl);
 }
 
@@ -555,6 +559,7 @@ table {
 
 .org-constant,
 .org-nasm-constant,
-.org-nasm-types {
+.org-nasm-types,
+.org-php-constant {
   color: var(--purplel);
 }
